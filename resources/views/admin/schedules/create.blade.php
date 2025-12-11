@@ -24,6 +24,19 @@
                 @csrf
 
                 <div class="form-group">
+                    <label class="font-weight-bold">Select Doctor</label>
+                    <select name="doctor_id" class="form-control" required>
+                        <option value="">-- Choose Doctor --</option>
+                        @foreach($doctors as $doc)
+                            <option value="{{ $doc->id }}" 
+                                {{ (isset($prefilledDoctorId) && $prefilledDoctorId == $doc->id) ? 'selected' : '' }}>
+                                Dr. {{ $doc->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label class="font-weight-bold">Date</label>
                     <input type="date" name="date" class="form-control" required value="{{ $prefilledDate ?? '' }}">
                     <small class="form-text text-muted">Select the day the doctor is available.</small>

@@ -4,64 +4,68 @@ namespace App\Http\Controllers;
 
 use App\Models\Schedule;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 
 class ScheduleController extends Controller
 {
-    // 1. List all upcoming schedules
     public function index()
     {
-        // Get all doctors to populate the filter dropdown
         $doctors = \App\Models\User::where('role', 'doctor')->get();
-        
         return view('admin.schedules.index', compact('doctors'));
     }
 
-    // 2. Show the form (Updated to accept pre-filled date)
     public function create(Request $request)
     {
-        $prefilledDate = $request->get('date'); // Get date from URL if it exists
-        return view('admin.schedules.create', compact('prefilledDate'));
+        $prefilledDate = $request->get('date'); 
+        $prefilledDoctorId = $request->get('doctor_id');
+        $doctors = \App\Models\User::where('role', 'doctor')->get();
+
+        return view('admin.schedules.create', compact('doctors', 'prefilledDate', 'prefilledDoctorId'));
     }
 
-    // 3. Save the availability
     public function store(Request $request)
     {
+        // --- 1. REMOVE 'max_appointments' FROM THIS LIST ---
         $request->validate([
-            'doctor_id' => 'required|exists:users,id', // <--- Must pick a doctor
+            'doctor_id' => 'required|exists:users,id',
             'date' => 'required|date|after_or_equal:today',
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
-            'max_appointments' => 'required|integer|min:1',
+            // 'max_appointments' line IS DELETED
         ]);
 
-        // Check duplicates for THAT SPECIFIC DOCTOR only
+        // 2. CHECK DUPLICATES
         $exists = Schedule::where('doctor_id', $request->doctor_id)
                           ->where('date', $request->date)
                           ->exists();
 
         if ($exists) {
-            return back()->withErrors(['date' => 'This doctor already has a schedule for this date.']);
+            if($request->wantsJson()) {
+                return response()->json(['message' => 'Schedule already exists for this date.'], 422);
+            }
+            return back()->withErrors(['date' => 'Schedule already exists.']);
         }
 
-        Schedule::create($request->all());
+        // --- 3. ADD DUMMY VALUE HERE ---
+        Schedule::create([
+            'doctor_id' => $request->doctor_id,
+            'date' => $request->date,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+            'max_appointments' => 999, // <--- We hardcode this so DB is happy
+        ]);
 
-        return redirect()->route('admin.schedules.index')
-            ->with('success', 'Availability set successfully!');
+        // 4. RETURN
+        if($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Availability initialized!']);
+        }
+
+        return redirect()->route('admin.schedules.index')->with('success', 'Availability set.');
     }
 
-    // 4. Delete a schedule
     public function destroy($id)
     {
         $schedule = Schedule::findOrFail($id);
-        
-        if ($schedule->booked_count > 0) {
-            return back()->with('error', 'Cannot delete: Patients are already booked for this day.');
-        }
-
         $schedule->delete();
-
-        return redirect()->route('admin.schedules.index')
-            ->with('success', 'Availability removed.');
+        return redirect()->route('admin.schedules.index')->with('success', 'Availability removed.');
     }
 }

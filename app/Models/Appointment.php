@@ -16,6 +16,7 @@ class Appointment extends Model
         'service_id',
         'appointment_date',
         'appointment_time',
+        'duration_hours',
         'status',
         'cancellation_reason',
         'cancelled_by',

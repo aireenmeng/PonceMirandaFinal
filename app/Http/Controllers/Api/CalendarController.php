@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Schedule;
 use App\Models\Appointment;
-use App\Models\User;
+use Carbon\Carbon;
 
 class CalendarController extends Controller
 {
@@ -14,62 +14,33 @@ class CalendarController extends Controller
     {
         $start = $request->start;
         $end = $request->end;
-        $doctorId = $request->doctor_id; // <--- Get the ID from the dropdown
+        $doctorId = $request->doctor_id;
 
+        // Fetch schedules
         $query = Schedule::whereBetween('date', [$start, $end]);
-
-        // If a specific doctor is selected, filter by them.
-        // If no doctor is selected (value=""), maybe show ALL or NONE. 
-        // Let's show ALL by default, or filter if ID is present.
         if ($doctorId) {
             $query->where('doctor_id', $doctorId);
         }
-
-        $schedules = $query->get();
-        // 1. Get the range (FullCalendar sends 'start' and 'end' dates)
-        $start = $request->start;
-        $end = $request->end;
-        $doctorId = $request->doctor_id; // Filter by doctor
-
-        // 2. Fetch Doctor Schedules in that range
-        $query = Schedule::whereBetween('date', [$start, $end]);
-        
-        // (Optional: If you add 'doctor_id' to schedules table later)
-        // if ($doctorId) { $query->where('doctor_id', $doctorId); }
-
         $schedules = $query->get();
 
         $events = [];
 
         foreach ($schedules as $sched) {
-            // 3. Count Appointments for this day
+            // Count actual bookings to show "X Booked" on the calendar view
             $bookedCount = Appointment::whereDate('appointment_date', $sched->date)
                 ->where('status', '!=', 'cancelled')
+                ->where('doctor_id', $sched->doctor_id)
                 ->count();
 
-            // 4. Determine Color
-            $color = '#1cc88a'; // Green (Default)
-            $title = "Available";
-
-            if ($bookedCount >= $sched->max_appointments) {
-                $color = '#e74a3b'; // Red (Full)
-                $title = "FULL";
-            } elseif ($bookedCount >= ($sched->max_appointments / 2)) {
-                $color = '#f6c23e'; // Yellow (Filling Up)
-                $title = "Filling Up";
-            }
-
-            // 5. Format for FullCalendar
             $events[] = [
                 'id' => $sched->id,
-                'title' => $title . " ($bookedCount/$sched->max_appointments)",
+                'title' => $bookedCount . " Patient(s)", // Simple count
                 'start' => $sched->date->format('Y-m-d'),
-                'backgroundColor' => $color,
-                'borderColor' => $color,
+                'backgroundColor' => '#ffffff', // White background
+                'borderColor' => '#4e73df', // Blue border
+                'textColor' => '#4e73df',
                 'extendedProps' => [
-                    'total' => $sched->max_appointments,
-                    'booked' => $bookedCount,
-                    'status' => $title
+                    'doctor_id' => $sched->doctor_id
                 ]
             ];
         }
@@ -77,65 +48,100 @@ class CalendarController extends Controller
         return response()->json($events);
     }
 
-    // Get specific slots when a day is clicked
     public function getDayDetails(Request $request)
     {
         $date = $request->date;
         $doctorId = $request->doctor_id;
 
-        // 1. Get the Schedule settings for this day/doctor
+        // 1. Get Schedule
         $schedule = Schedule::whereDate('date', $date)
-            ->when($doctorId, function($q) use ($doctorId) {
-                return $q->where('doctor_id', $doctorId);
-            })
+            ->where('doctor_id', $doctorId)
             ->first();
 
         if (!$schedule) {
-            return response()->json(['status' => 'closed', 'message' => 'Doctor is not scheduled for this day.']);
+            return response()->json(['status' => 'closed', 'message' => 'No schedule set.']);
         }
 
-        // 2. Get existing appointments
+        // 2. Get Appointments
         $appointments = Appointment::with(['patient', 'service'])
             ->whereDate('appointment_date', $date)
+            ->where('doctor_id', $doctorId)
             ->where('status', '!=', 'cancelled')
-            ->when($doctorId, function($q) use ($doctorId) {
-                return $q->where('doctor_id', $doctorId);
-            })
             ->get();
 
-        // 3. Generate Slots (Hourly)
+        // 3. Generate 30-Minute Slots
         $slots = [];
         $startTime = Carbon::parse($schedule->start_time);
         $endTime = Carbon::parse($schedule->end_time);
+        
+        // Define Lunch (12:00 - 1:00)
+        $lunchStart = Carbon::parse($date . ' 12:00:00');
+        $lunchEnd = Carbon::parse($date . ' 13:00:00');
 
-        // Loop hour by hour
         while ($startTime < $endTime) {
-            $slotTime = $startTime->format('H:i:s');
-            $displayTime = $startTime->format('h:i A');
+            $slotStart = $startTime->copy();
+            // CHANGED: Add 30 minutes instead of 1 hour
+            $slotEnd = $startTime->copy()->addMinutes(30); 
             
-            // Check if this slot is taken
-            $booking = $appointments->first(function ($appt) use ($slotTime) {
-                // strict check: does appointment start exactly at this time?
-                return Carbon::parse($appt->appointment_time)->format('H:i:s') === $slotTime;
-            });
+            $displayTime = $slotStart->format('g:i A') . ' - ' . $slotEnd->format('g:i A');
+            
+            // A. Lunch Check (Strict 12:00 - 1:00)
+            if ($slotStart >= $lunchStart && $slotStart < $lunchEnd) {
+                $slots[] = [
+                    'type' => 'lunch',
+                    'time_label' => $displayTime,
+                    'status_text' => 'LUNCH BREAK',
+                    'color' => 'red',
+                    'raw_time' => $slotStart->format('H:i')
+                ];
+                $startTime->addMinutes(30);
+                continue;
+            }
+
+            // B. Booking Conflict Check
+            // We check if this 30-min slot falls INSIDE any existing booking
+            $booking = $appointments->filter(function($appt) use ($slotStart, $slotEnd) {
+                $apptStart = Carbon::parse($appt->appointment_date->format('Y-m-d') . ' ' . $appt->appointment_time->format('H:i:s'));
+                $apptEnd = $apptStart->copy()->addMinutes($appt->duration_minutes);
+
+                // If slot overlaps with booking
+                return $slotStart < $apptEnd && $slotEnd > $apptStart;
+            })->first();
 
             if ($booking) {
-                $slots[] = [
-                    'time' => $displayTime,
-                    'raw_time' => $slotTime,
-                    'status' => 'booked',
-                    'info' => $booking // pass patient details
-                ];
+                if ($booking->status === 'blocked') {
+                    $slots[] = [
+                        'type' => 'blocked',
+                        'time_label' => $displayTime,
+                        'status_text' => 'RESERVED (ADMIN)',
+                        'color' => 'red',
+                        'appt_id' => $booking->id
+                    ];
+                } else {
+                    $patientName = $booking->patient ? $booking->patient->name : 'Guest';
+                    $serviceName = $booking->service ? $booking->service->name : 'General';
+                    
+                    $slots[] = [
+                        'type' => 'booked',
+                        'time_label' => $displayTime,
+                        'details' => strtoupper($serviceName . ' - ' . $patientName),
+                        'color' => 'red',
+                        'appt_id' => $booking->id
+                    ];
+                }
             } else {
                 $slots[] = [
-                    'time' => $displayTime,
-                    'raw_time' => $slotTime,
-                    'status' => 'available',
-                    'doctor_id' => $schedule->doctor_id // needed for booking
+                    'type' => 'available',
+                    'time_label' => $displayTime,
+                    'status_text' => 'AVAILABLE',
+                    'color' => 'green',
+                    'raw_date' => $date,
+                    'raw_time' => $slotStart->format('H:i')
                 ];
             }
 
-            $startTime->addHour(); // increment by 1 hour
+            // Increment loop by 30 mins
+            $startTime->addMinutes(30);
         }
 
         return response()->json(['status' => 'open', 'slots' => $slots]);

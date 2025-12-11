@@ -70,6 +70,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/appointments/{id}/cancel', [App\Http\Controllers\AppointmentController::class, 'cancel'])->name('appointments.cancel');
     Route::post('/appointments/{id}/complete', [App\Http\Controllers\AppointmentController::class, 'complete'])->name('appointments.complete');
 
+    // --- Appointment Details & Blocking ---
+Route::get('/appointments/{id}', [App\Http\Controllers\AppointmentController::class, 'show'])->name('appointments.show');
+Route::post('/appointments/block-slot', [App\Http\Controllers\AppointmentController::class, 'blockSlot'])->name('appointments.block');
+
 });
 
 // --- SHARED PROFILE ROUTES ---
