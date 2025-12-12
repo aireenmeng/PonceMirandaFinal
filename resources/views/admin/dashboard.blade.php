@@ -68,6 +68,27 @@
         </div>
     </div>
 
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="font-weight-bold text-primary mb-1">Quick Actions</h5>
+                        <span class="small text-muted">Manage walk-ins and daily operations</span>
+                    </div>
+                    <div>
+                        <a href="{{ route('admin.schedules.index') }}" class="btn btn-success shadow-sm mr-2">
+                            <i class="fas fa-calendar-check mr-2"></i> Book Walk-In
+                        </a>
+                        <a href="{{ route('admin.patients.create') }}" class="btn btn-info shadow-sm">
+                            <i class="fas fa-user-plus mr-2"></i> New Patient
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-xl-8 col-lg-7">
             <div class="card shadow mb-4">

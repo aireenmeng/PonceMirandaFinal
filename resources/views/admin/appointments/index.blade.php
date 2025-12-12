@@ -88,67 +88,64 @@
                             <td class="pl-4">
                                 <div class="font-weight-bold text-dark">{{ $appt->appointment_date->format('M d, Y') }}</div>
                                 <div class="small text-primary font-weight-bold">
-                                    {{-- CALCULATE END TIME DYNAMICALLY --}}
-                                    {{ $appt->appointment_time->format('h:i A') }} - 
-                                    {{ $appt->appointment_time->copy()->addMinutes($appt->duration_minutes)->format('h:i A') }}
+                                    {{-- Show End Time --}}
+                                    {{ $appt->appointment_time->format('h:i A') }}
                                 </div>
                             </td>
                             <td>
-                                <div class="font-weight-bold">{{ $appt->patient->name ?? 'Guest' }}</div>
+                                {{-- FIX 1: Check if patient exists --}}
+                                <div class="font-weight-bold">{{ $appt->patient->name ?? 'Unknown / Deleted User' }}</div>
                                 <div class="small text-muted">{{ $appt->patient->phone ?? 'No Phone' }}</div>
                             </td>
                             <td>
-                                <div><i class="fas fa-user-md text-gray-400 mr-1"></i> Dr. {{ $appt->doctor->name }}</div>
-                                <div class="small text-success font-weight-bold">{{ $appt->service->name }}</div>
+                                {{-- FIX 2: Check if doctor exists --}}
+                                <div><i class="fas fa-user-md text-gray-400 mr-1"></i> Dr. {{ $appt->doctor->name ?? 'Unavailable' }}</div>
+                                <div class="small text-success font-weight-bold">{{ $appt->service->name ?? 'Custom Service' }}</div>
                             </td>
                             <td>
                                 <span class="badge badge-light border">
-                                    {{-- DISPLAY DURATION NICELY --}}
-                                    {{ $appt->duration_minutes >= 60 
-                                        ? ($appt->duration_minutes / 60) . ' hr' . ($appt->duration_minutes > 60 ? 's' : '') 
-                                        : $appt->duration_minutes . ' mins' }}
+                                    {{ $appt->duration_minutes }} mins
                                 </span>
                             </td>
 
                             @if($status == 'cancelled')
                                 <td class="text-danger small font-italic">
                                     "{{ $appt->cancellation_reason }}"<br>
-                                    <span class="text-muted">By: {{ $appt->canceller->name ?? 'System' }}</span>
+                                    {{-- FIX 3: Check if canceller exists --}}
+                                    <span class="text-muted">By: {{ $appt->canceller->name ?? 'System / Patient' }}</span>
                                 </td>
                             @else
                                 <td class="text-right pr-4">
                                     <div class="btn-group" role="group">
-                                        {{-- VIEW --}}
                                         <a href="{{ route('admin.appointments.show', $appt->id) }}" class="btn btn-sm btn-info" title="View Details">
-                                            <i class="fas fa-eye"></i>
+                                            <i class="fas fa-eye"></i> View
                                         </a>
 
-                                        {{-- PENDING ACTIONS --}}
                                         @if($status == 'pending')
-                                            <form action="{{ route('admin.appointments.confirm', $appt->id) }}" method="POST">
+                                            <form action="{{ route('admin.appointments.confirm', $appt->id) }}" method="POST" style="display:inline;">
                                                 @csrf
-                                                <button type="submit" class="btn btn-sm btn-success ml-1" title="Confirm Booking">
-                                                    <i class="fas fa-check"></i>
+                                                <button type="submit" class="btn btn-sm btn-success ml-1">
+                                                    <i class="fas fa-check"></i> Confirm
                                                 </button>
                                             </form>
-                                            <button class="btn btn-sm btn-danger ml-1" data-toggle="modal" data-target="#cancelModal-{{ $appt->id }}" title="Reject">
-                                                <i class="fas fa-times"></i>
+                                            <button class="btn btn-sm btn-danger ml-1" data-toggle="modal" data-target="#cancelModal-{{ $appt->id }}">
+                                                <i class="fas fa-times"></i> Reject
                                             </button>
 
-                                        {{-- CONFIRMED ACTIONS --}}
                                         @elseif($status == 'confirmed')
-                                            <form action="{{ route('admin.appointments.complete', $appt->id) }}" method="POST">
+                                            <form action="{{ route('admin.appointments.complete', $appt->id) }}" method="POST" style="display:inline;">
                                                 @csrf
-                                                <button type="submit" class="btn btn-sm btn-primary ml-1" title="Mark as Completed" onclick="return confirm('Complete this appointment?')">
-                                                    <i class="fas fa-check-double"></i>
+                                                <button type="submit" class="btn btn-sm btn-primary ml-1" onclick="return confirm('Complete this appointment?')">
+                                                    <i class="fas fa-check-double"></i> Complete
                                                 </button>
                                             </form>
-                                            <button class="btn btn-sm btn-warning ml-1" data-toggle="modal" data-target="#cancelModal-{{ $appt->id }}" title="Cancel">
-                                                <i class="fas fa-ban"></i>
+                                            <button class="btn btn-sm btn-warning ml-1" data-toggle="modal" data-target="#cancelModal-{{ $appt->id }}">
+                                                <i class="fas fa-ban"></i> Cancel
                                             </button>
                                         @endif
                                     </div>
 
+                                    {{-- Cancel Modal (Keep existing modal code here) --}}
                                     <div class="modal fade text-left" id="cancelModal-{{ $appt->id }}" tabindex="-1">
                                         <div class="modal-dialog">
                                             <div class="modal-content">
@@ -159,11 +156,8 @@
                                                 <form action="{{ route('admin.appointments.cancel', $appt->id) }}" method="POST">
                                                     @csrf
                                                     <div class="modal-body">
-                                                        <p>Confirm cancellation for <strong>{{ $appt->patient->name }}</strong>?</p>
-                                                        <div class="form-group">
-                                                            <label class="font-weight-bold">Reason <span class="text-danger">*</span></label>
-                                                            <textarea name="cancellation_reason" class="form-control" rows="3" required></textarea>
-                                                        </div>
+                                                        <p>Reason for cancellation?</p>
+                                                        <textarea name="cancellation_reason" class="form-control" required></textarea>
                                                     </div>
                                                     <div class="modal-footer">
                                                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -173,18 +167,18 @@
                                             </div>
                                         </div>
                                     </div>
-                                    </td>
+                                </td>
                             @endif
                         </tr>
                         @empty
                         <tr>
                             <td colspan="6" class="text-center py-5 text-muted">
                                 <i class="fas fa-calendar-times fa-3x mb-3 text-gray-300"></i><br>
-                                No appointments found.
+                                No appointments found in this category.
                             </td>
                         </tr>
                         @endforelse
-                    </tbody>
+                    </tbody>    
                 </table>
             </div>
         </div>

@@ -1,7 +1,9 @@
 @extends('layouts.admin')
 
 @section('content')
-    <h1 class="h3 mb-4 text-gray-800">Patient Database</h1>
+    <h1 class="h3 mb-4 text-gray-800">Patient Database</h1><a href="{{ route('admin.patients.create') }}" class="btn btn-sm btn-primary shadow-sm">
+        <i class="fas fa-user-plus fa-sm text-white-50"></i> Register Patient
+    </a>
 
     <div class="card shadow mb-4">
         <div class="card-header py-3">

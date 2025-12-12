@@ -26,13 +26,14 @@ Route::get('/home', LoginRedirectController::class)->middleware(['auth'])->name(
 // --- SHARED ROUTES (Admins, Doctors, Patients) ---
 Route::middleware(['auth'])->group(function () {
     // Profile Management
+    // These names MUST match what is in your javascript fetch() calls
+    Route::get('/api/calendar/events', [CalendarController::class, 'getEvents'])->name('api.calendar');
+    Route::get('/api/calendar/details', [CalendarController::class, 'getDayDetails'])->name('api.day_details');
+    
+    // Profile (Shared)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-    // SHARED API: Calendar Data (Used by Admin Calendar & Patient Booking Wizard)
-    Route::get('/api/calendar/events', [CalendarController::class, 'getEvents'])->name('api.calendar');
-    Route::get('/api/calendar/details', [CalendarController::class, 'getDayDetails'])->name('api.day_details');
 });
 
 // --- PATIENT ROUTES (Role: patient) ---
@@ -46,6 +47,8 @@ Route::middleware(['auth', 'role:patient'])->group(function () {
 
     // 3. Full History
     Route::get('/my-history', [App\Http\Controllers\PatientHistoryController::class, 'index'])->name('patient.history');
+    Route::get('/my-appointments', [App\Http\Controllers\PatientHistoryController::class, 'index'])->name('patient.appointments');
+Route::post('/my-appointments/{id}/cancel', [App\Http\Controllers\PatientHistoryController::class, 'cancel'])->name('patient.cancel');
 });
 
 // --- DOCTOR ROUTES (Role: doctor) ---
@@ -97,11 +100,17 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::put('/patients/{id}', [PatientController::class, 'update'])->name('patients.update');
     Route::delete('/patients/{id}', [PatientController::class, 'destroy'])->name('patients.destroy');
     Route::post('/patients/{id}/restore', [PatientController::class, 'restore'])->name('patients.restore');
+    Route::get('/patients/create', [PatientController::class, 'create'])->name('patients.create');
+Route::post('/patients', [PatientController::class, 'store'])->name('patients.store');
 
     // --- 5. STAFF ---
     Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
     Route::get('/staff/create', [StaffController::class, 'create'])->name('staff.create');
     Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
+    // ADD THESE TWO LINES:
+    Route::get('/staff/{id}/edit', [StaffController::class, 'edit'])->name('staff.edit');
+    Route::put('/staff/{id}', [StaffController::class, 'update'])->name('staff.update');
+    // -------------------
     Route::delete('/staff/{id}', [StaffController::class, 'destroy'])->name('staff.destroy');
     Route::post('/staff/{id}/restore', [StaffController::class, 'restore'])->name('staff.restore');
 

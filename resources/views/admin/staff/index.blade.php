@@ -33,19 +33,40 @@
                 <tbody>
                     @foreach($staff as $user)
                     <tr>
-                        <td class="font-weight-bold">{{ $user->name }}</td>
-                        <td><span class="badge {{ $user->role == 'admin' ? 'badge-danger' : 'badge-info' }}">{{ ucfirst($user->role) }}</span></td>
-                        <td>{{ $user->email }}</td>
+                        <td class="font-weight-bold">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-gray-200 d-flex align-items-center justify-content-center mr-3" style="width:35px; height:35px;">
+                                    <i class="fas fa-user text-gray-500"></i>
+                                </div>
+                                {{ $user->name }}
+                            </div>
+                        </td>
                         <td>
+                            <span class="badge {{ $user->role == 'admin' ? 'badge-danger' : 'badge-info' }} px-2 py-1">
+                                {{ strtoupper($user->role) }}
+                            </span>
+                        </td>
+                        <td>{{ $user->email }}</td>
+                        <td class="text-right">
                             @if($view == 'archived')
                                 <form action="{{ route('admin.staff.restore', $user->id) }}" method="POST">
                                     @csrf
-                                    <button class="btn btn-success btn-sm"><i class="fas fa-trash-restore"></i> Restore</button>
+                                    <button class="btn btn-success btn-sm shadow-sm">
+                                        <i class="fas fa-trash-restore mr-1"></i> Restore
+                                    </button>
                                 </form>
                             @else
-                                <form action="{{ route('admin.staff.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Deactivate user?');">
+                                {{-- EDIT BUTTON (Added) --}}
+                                <a href="{{ route('admin.staff.edit', $user->id) }}" class="btn btn-info btn-sm shadow-sm mr-1">
+                                    <i class="fas fa-pen"></i> Edit
+                                </a>
+
+                                {{-- ARCHIVE BUTTON --}}
+                                <form action="{{ route('admin.staff.destroy', $user->id) }}" method="POST" style="display:inline" onsubmit="return confirm('Deactivate user?');">
                                     @csrf @method('DELETE')
-                                    <button class="btn btn-danger btn-sm btn-circle"><i class="fas fa-user-times"></i></button>
+                                    <button class="btn btn-secondary btn-sm shadow-sm">
+                                        <i class="fas fa-archive"></i> Archive
+                                    </button>
                                 </form>
                             @endif
                         </td>

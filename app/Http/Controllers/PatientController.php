@@ -71,4 +71,30 @@ class PatientController extends Controller
         User::onlyTrashed()->findOrFail($id)->restore();
         return back()->with('success', 'Patient restored.');
     }
+
+    public function create()
+    {
+        return view('admin.patients.create');
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'phone' => 'nullable|string',
+            'password' => 'required|min:8'
+        ]);
+
+        User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+            'role' => 'patient',
+            'email_verified_at' => now(), // Auto-verify admin created users
+        ]);
+
+        return redirect()->route('admin.patients.index')->with('success', 'Patient registered successfully.');
+    }
 }

@@ -149,10 +149,11 @@
             initialView: 'dayGridMonth',
             headerToolbar: { left: 'prev,next', center: 'title', right: '' },
             height: 500,
+            validRange: { start: new Date().toISOString().split('T')[0] },
             events: function(info, successCallback, failureCallback) {
                 var doctorId = doctorSelect.value;
                 if(!doctorId) { successCallback([]); return; }
-                fetch("{{ route('admin.api.calendar') }}?doctor_id=" + doctorId + "&start=" + info.startStr + "&end=" + info.endStr)
+                fetch("{{ route('api.calendar') }}?doctor_id=" + doctorId + "&start=" + info.startStr + "&end=" + info.endStr)
                     .then(r => r.json()).then(data => successCallback(data));
             },
             dateClick: function(info) {
@@ -189,7 +190,7 @@
         
         container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
 
-        fetch(`{{ route('admin.api.day_details') }}?date=${currentSelectedDate}&doctor_id=${currentDoctorId}`)
+        fetch(`{{ route('api.day_details') }}?date=${currentSelectedDate}&doctor_id=${currentDoctorId}`)
             .then(r => r.json())
             .then(data => {
                 currentDayStatus = data.status;
@@ -224,6 +225,7 @@
         let html = '';
 
         slots.forEach(slot => {
+            // 1. LUNCH
             if (slot.type === 'lunch') {
                 html += `
                 <div class="slot-row status-lunch">
@@ -234,7 +236,7 @@
             }
 
             if (isAdjustMode) {
-                // EDIT MODE
+                // 2. ADJUST MODE
                 if (slot.type === 'booked') {
                         html += `<div class="slot-row bg-light"><div class="slot-time text-muted">${slot.time_label}</div><div class="slot-status text-muted">BOOKED</div><span class="badge badge-secondary"><i class="fas fa-lock"></i></span></div>`;
                 } else {
@@ -249,8 +251,9 @@
                         </div>`;
                 }
             } else {
-                // VIEW MODE
+                // 3. VIEW MODE (Standard)
                 if (slot.type === 'booked') {
+                    // LINK FIX: Now uses slot.appt_id correctly
                     html += `
                     <div class="slot-row status-booked">
                         <div class="slot-time">${slot.time_label}</div>
@@ -264,13 +267,15 @@
                         <div class="slot-status">Blocked</div>
                     </div>`;
                 } else {
+                    // LINK FIX: Now uses slot.raw_date correctly
+                    // DESIGN FIX: Text removed, only Icon kept
                     html += `
                     <div class="slot-row status-open">
                         <div class="slot-time">${slot.time_label}</div>
                         <div class="slot-status">Available</div>
                         <a href="{{ route('admin.appointments.create') }}?date=${slot.raw_date}&time=${slot.raw_time}&doctor_id=${currentDoctorId}" 
-                           class="btn btn-sm btn-success shadow-sm px-3" style="border-radius: 20px;">
-                           <i class="fas fa-plus mr-1"></i> Book
+                           class="btn btn-sm btn-success shadow-sm btn-circle">
+                           <i class="fas fa-plus"></i>
                         </a>
                     </div>`;
                 }

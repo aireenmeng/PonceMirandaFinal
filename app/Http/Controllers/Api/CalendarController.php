@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 
 class CalendarController extends Controller
 {
-    // 1. CALENDAR EVENTS (Dots/Colors)
+    // 1. CALENDAR EVENTS (Dots/Colors) - (No changes needed here, but included for context)
     public function getEvents(Request $request)
     {
         $start = $request->start;
@@ -26,11 +26,9 @@ class CalendarController extends Controller
         $isPatient = Auth::check() && Auth::user()->role === 'patient';
 
         foreach ($schedules as $sched) {
-            // Patient View: Always Green "Available" if scheduled
-            // Admin View: Shows count
             if ($isPatient) {
                 $title = "Open";
-                $color = '#1cc88a'; // Green
+                $color = '#1cc88a'; 
                 $textColor = '#ffffff';
             } else {
                 $count = Appointment::whereDate('appointment_date', $sched->date)
@@ -53,7 +51,7 @@ class CalendarController extends Controller
         return response()->json($events);
     }
 
-    // 2. SLOT DETAILS (Strict Blocking)
+    // 2. SLOT DETAILS (STRICT BLOCKING) - *** FIXED ***
     public function getDayDetails(Request $request)
     {
         $date = $request->date;
@@ -86,23 +84,25 @@ class CalendarController extends Controller
             // STATUS DEFAULT: AVAILABLE
             $status = 'available';
             $details = 'Available';
+            $apptId = null; // Default null
 
-            // CHECK 1: LUNCH (Strict)
-            // If slot starts at 12:00 OR 12:30, it is lunch.
+            // CHECK 1: LUNCH
             if ($slotStart->betweenIncluded($lunchStart, $lunchEnd->copy()->subMinute())) {
                 $status = 'lunch';
                 $details = 'Lunch Break';
             }
 
-            // CHECK 2: BOOKINGS (Overlap)
+            // CHECK 2: BOOKINGS
             foreach ($bookings as $appt) {
-                $apptStart = Carbon::parse($appt->appointment_date->format('Y-m-d') . ' ' . $appt->appointment_time->format('H:i:s'));
+                // Ensure we parse the DB time correctly
+                $apptStart = Carbon::parse($date . ' ' . $appt->appointment_time->format('H:i:s'));
                 $apptEnd = $apptStart->copy()->addMinutes($appt->duration_minutes);
 
                 // If Slot Start is inside the Appointment Duration
                 if ($slotStart >= $apptStart && $slotStart < $apptEnd) {
                     $status = 'booked';
-                    $details = 'Booked'; // Privacy: Don't show name
+                    $details = 'Booked'; 
+                    $apptId = $appt->id; // <--- VITAL: SEND ID SO ADMIN CAN CLICK
                     break; 
                 }
             }
@@ -110,8 +110,10 @@ class CalendarController extends Controller
             $slots[] = [
                 'time_label' => $label,
                 'raw_time' => $slotStart->format('H:i'),
+                'raw_date' => $date, // <--- VITAL: SEND DATE FOR LINK
                 'type' => $status,
-                'details' => $details
+                'details' => $details,
+                'appt_id' => $apptId // <--- Added
             ];
 
             $startTime->addMinutes(30);
