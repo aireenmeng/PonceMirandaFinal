@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Providers\RouteServiceProvider;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,19 +29,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // --- CUSTOM REDIRECT LOGIC ---
-        $role = $request->user()->role;
-
-        if ($role === 'admin') {
-            return redirect()->route('admin.dashboard');
-        } 
-        
-        if ($role === 'doctor') {
-            return redirect()->route('doctor.dashboard');
+        // Redirect to Admin Dashboard if admin, else standard dashboard
+        if ($request->user()->role === 'admin') {
+            return redirect()->intended(route('admin.dashboard')); 
         }
 
-        // Default for Patients
-        return redirect()->route('dashboard');
+        return redirect()->intended(RouteServiceProvider::HOME);
     }
 
     /**
@@ -54,6 +48,9 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // --- FIX IS HERE ---
+        // Old code was likely: return redirect('/'); 
+        // This caused the 404 because you don't have a homepage.
+        return redirect('/login'); 
     }
 }

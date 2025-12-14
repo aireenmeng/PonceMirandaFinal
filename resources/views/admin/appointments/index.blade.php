@@ -29,28 +29,32 @@
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <ul class="nav nav-pills card-header-pills">
-                {{-- The 'Today' tab must pass the current date --}}
+                {{-- TAB: Today (Date Parameter) --}}
                 <li class="nav-item">
                     <a class="nav-link {{ request('date') == now()->format('Y-m-d') ? 'active' : '' }}" 
                     href="{{ route('admin.appointments.index', ['date' => now()->format('Y-m-d')]) }}">
                     Today
                     </a>
                 </li>
+                {{-- TAB: Pending --}}
                 <li class="nav-item">
                     <a class="nav-link {{ $currentTab == 'pending' ? 'active' : '' }}" href="{{ route('admin.appointments.index', ['status' => 'pending']) }}">
                         <i class="fas fa-clock mr-1"></i> Pending
                     </a>
                 </li>
+                {{-- TAB: Confirmed --}}
                 <li class="nav-item">
                     <a class="nav-link {{ $currentTab == 'confirmed' ? 'active' : '' }}" href="{{ route('admin.appointments.index', ['status' => 'confirmed']) }}">
                         <i class="fas fa-check mr-1"></i> Confirmed
                     </a>
                 </li>
+                {{-- TAB: History/Completed --}}
                 <li class="nav-item">
                     <a class="nav-link {{ $currentTab == 'completed' ? 'active' : '' }}" href="{{ route('admin.appointments.index', ['status' => 'completed']) }}">
                         <i class="fas fa-history mr-1"></i> History
                     </a>
                 </li>
+                {{-- TAB: Cancelled --}}
                 <li class="nav-item">
                     <a class="nav-link {{ $currentTab == 'cancelled' ? 'active bg-danger text-white' : 'text-danger' }}" href="{{ route('admin.appointments.index', ['status' => 'cancelled']) }}">
                         <i class="fas fa-ban mr-1"></i> Cancelled
@@ -59,9 +63,18 @@
             </ul>
         </div>
 
+        {{-- SEARCH & FILTER SECTION --}}
         <div class="card-body bg-light border-bottom">
+            {{-- SMART SEARCH FORM: Remembers your active tab (Date or Status) --}}
             <form action="{{ route('admin.appointments.index') }}" method="GET" class="form-inline">
-                <input type="hidden" name="status" value="{{ $status }}">
+                
+                {{-- FIX: Preserve the 'date' (Today tab) if it exists --}}
+                @if(request()->has('date'))
+                    <input type="hidden" name="date" value="{{ request('date') }}">
+                @else
+                    {{-- Only preserve 'status' if we are NOT on the date tab --}}
+                    <input type="hidden" name="status" value="{{ $status }}">
+                @endif
                 
                 <div class="input-group mr-2 mb-2">
                     <div class="input-group-prepend">
@@ -77,7 +90,7 @@
                 <input type="date" name="end_date" class="form-control mr-2 mb-2" value="{{ $endDate }}">
 
                 <button type="submit" class="btn btn-primary mb-2 shadow-sm">Filter</button>
-                <a href="{{ route('admin.appointments.index', ['status' => $status]) }}" class="btn btn-secondary mb-2 ml-2 shadow-sm">Reset</a>
+                <a href="{{ route('admin.appointments.index', request()->has('date') ? ['date' => request('date')] : ['status' => 'pending']) }}" class="btn btn-secondary mb-2 ml-2 shadow-sm">Reset</a>
             </form>
         </div>
         
@@ -166,6 +179,7 @@
                                     <div class="text-danger small font-italic mb-2">"{{ $appt->cancellation_reason }}"</div>
                                     <form action="{{ route('admin.appointments.restore', $appt->id) }}" method="POST" class="d-inline">
                                         @csrf
+                                        {{-- Pass current filters to return to same page --}}
                                         @foreach(request()->query() as $key => $value) <input type="hidden" name="{{ $key }}" value="{{ $value }}"> @endforeach
                                         <button class="btn btn-success btn-sm rounded-pill px-3"><i class="fas fa-undo"></i> Restore</button>
                                     </form>
@@ -173,18 +187,16 @@
                             @else
                                 <td class="text-right pr-4">
                                     @php
-                                        $now = \Carbon\Carbon::now();
                                         $isFutureAppointment = $appt->appointment_date->isFuture();
-                                        $queryParams = array_merge(request()->query(), ['id' => $appt->id]); // Preserve current filters
                                     @endphp
 
                                     @if($isFutureAppointment)
-                                        <a href="{{ route('admin.appointments.show', array_merge(['id' => $appt->id], request()->query())) }}" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-eye"></i> View</a>
-                                        <a href="{{ route('admin.appointments.edit', array_merge(['id' => $appt->id], request()->query())) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                        <a href="{{ route('admin.appointments.show', $appt->id) }}" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-eye"></i> View</a>
+                                        <a href="{{ route('admin.appointments.edit', $appt->id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
                                             <i class="fas fa-edit"></i> Edit
                                         </a>
                                     @else
-                                        <a href="{{ route('admin.appointments.show', array_merge(['id' => $appt->id], request()->query())) }}" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-eye"></i> View</a>
+                                        <a href="{{ route('admin.appointments.show', $appt->id) }}" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-eye"></i> View</a>
                                         
                                         @if($appt->status == 'pending')
                                             <form action="{{ route('admin.appointments.confirm', $appt->id) }}" method="POST" class="d-inline">
@@ -199,7 +211,6 @@
                                                 <button class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-check-double"></i> Complete</button>
                                             </form>
                                         @endif
-                                        {{-- Cancel button moved to show view --}}
                                     @endif
                                 </td>
                             @endif
@@ -212,8 +223,9 @@
             </div>
         </div>
         
-        <div class="card-footer bg-white d-flex justify-content-center"> {{-- Center pagination --}}
-            {{ $appointments->links('pagination::bootstrap-4') }} {{-- Explicitly use Bootstrap 4 --}}
+        <div class="card-footer bg-white d-flex justify-content-center"> 
+            {{-- This links() call is smart enough to preserve query string because of appends() in controller --}}
+            {{ $appointments->links('pagination::bootstrap-4') }} 
         </div>
     </div>
 

@@ -29,32 +29,17 @@
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <ul class="nav nav-pills card-header-pills">
-                {{-- 1. ACTIVE PATIENTS (Verified Email OR Walk-ins) --}}
                 <li class="nav-item">
-                    <a class="nav-link {{ $view == 'active' ? 'active' : '' }}" href="{{ route('admin.patients.index') }}">
-                        <i class="fas fa-user-check mr-1"></i> Active Patients
-                    </a>
+                    <a class="nav-link {{ $view == 'active' ? 'active' : '' }}" href="{{ route('admin.patients.index') }}">Active Patients</a>
                 </li>
-
-                {{-- 2. PENDING (Online Registrations needing Email Verification) --}}
+                {{-- NEW PENDING TAB --}}
                 <li class="nav-item">
                     <a class="nav-link {{ $view == 'pending' ? 'active bg-warning text-dark' : 'text-warning' }}" href="{{ route('admin.patients.index', ['view' => 'pending']) }}">
-                        <i class="fas fa-envelope mr-1"></i> Pending Verification
+                        <i class="fas fa-envelope mr-1"></i> Pending Invite
                     </a>
                 </li>
-
-                {{-- 3. WALK-IN (Manual Registrations / No Email) --}}
                 <li class="nav-item">
-                    <a class="nav-link {{ $view == 'walkin' ? 'active bg-info text-white' : 'text-info' }}" href="{{ route('admin.patients.index', ['view' => 'walkin']) }}">
-                        <i class="fas fa-walking mr-1"></i> Walk-In Only
-                    </a>
-                </li>
-
-                {{-- 4. ARCHIVED (Soft Deleted) --}}
-                <li class="nav-item ml-auto">
-                    <a class="nav-link {{ $view == 'archived' ? 'active bg-secondary text-white' : 'text-secondary' }}" href="{{ route('admin.patients.index', ['view' => 'archived']) }}">
-                        <i class="fas fa-archive mr-1"></i> Archived
-                    </a>
+                    <a class="nav-link {{ $view == 'archived' ? 'active bg-secondary text-white' : 'text-secondary' }}" href="{{ route('admin.patients.index', ['view' => 'archived']) }}">Archived</a>
                 </li>
             </ul>
         </div>
@@ -63,7 +48,7 @@
             <form action="{{ route('admin.patients.index') }}" method="GET" class="form-inline mb-3">
                 <input type="hidden" name="view" value="{{ $view }}">
                 <div class="input-group mr-2">
-                    <input type="text" class="form-control rounded-pill" name="search" placeholder="Search by name, email, or phone..." value="{{ $search }}">
+                    <input type="text" class="form-control rounded-pill" name="search" placeholder="Search by name or email..." value="{{ $search }}">
                     <div class="input-group-append">
                         <button class="btn btn-primary rounded-pill ml-2 px-3" type="submit">
                             <i class="fas fa-search"></i>
@@ -81,25 +66,8 @@
                     <tbody>
                         @foreach($patients as $patient)
                         <tr>
-                            <td class="font-weight-bold">
-                                {{ $patient->name }}
-                                <br>
-                                @if($patient->email === null)
-                                    <small class="badge badge-info text-white">Walk-in</small>
-                                @elseif($patient->email_verified_at === null)
-                                    <small class="badge badge-warning text-dark">Unverified</small>
-                                @else
-                                    <small class="badge badge-success">Active</small>
-                                @endif
-                            </td>
-                            <td>
-                                {{ $patient->email }}<br>
-                                @if($patient->phone)
-                                    <small><a href="tel:{{ $patient->phone }}" class="text-muted text-decoration-none">{{ $patient->phone }}</a></small>
-                                @else
-                                    <small class="text-muted">No Phone</small>
-                                @endif
-                            </td>
+                            <td class="font-weight-bold">{{ $patient->name }}</td>
+                            <td>{{ $patient->email }}<br><small>{{ $patient->phone }}</small></td>
                             <td>{{ $patient->appointments_count }} Records</td>
                             <td>
                                 @if($view == 'archived')

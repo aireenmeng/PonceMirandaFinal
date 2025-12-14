@@ -90,61 +90,83 @@ class AppointmentController extends Controller
     // In app/Http/Controllers/AppointmentController.php
 
 
-public function store(Request $request)
-{
-    // ... [Keep your existing validation rules] ...
-    $request->validate($rules);
+// --- 3. STORE (Handle Booking Logic) ---
+    public function store(Request $request)
+    {
+        // 1. Define Base Validation Rules (FIX: Defined at the very top)
+        $rules = [
+            'doctor_id'        => 'required|exists:users,id',
+            'service_id'       => 'required|exists:services,id',
+            'appointment_date' => 'required|date|after_or_equal:today',
+            'appointment_time' => 'required',
+            'duration_minutes' => 'required|integer|min:30',
+            // Ensure we know if it's a "new" (walk-in) or "existing" patient
+            'patient_type'     => 'required|in:existing,new', 
+        ];
 
-    // --- PRO FIX: Database Transaction & Locking ---
-    return DB::transaction(function () use ($request) {
-        
-        // 1. Lock the rows to prevent double booking (Race Condition Fix)
-        // We count existing confirmed bookings for this doctor/time, locking the reads.
-        $conflicts = Appointment::where('doctor_id', $request->doctor_id)
-            ->where('appointment_date', $request->appointment_date)
-            ->where('appointment_time', $request->appointment_time)
-            ->whereIn('status', ['confirmed', 'pending'])
-            ->lockForUpdate() // <--- CRITICAL: Locks these rows
-            ->count();
-
-        if ($conflicts > 0) {
-             // If someone snuck in a booking milliseconds ago, fail safely.
-             return redirect()->back()->withInput()->with('error', 'Slot was just taken! Please choose another.');
+        // 2. Add Conditional Rules based on Patient Type
+        if ($request->patient_type === 'existing') {
+            // Existing patient must select a valid user ID
+            $rules['user_id'] = 'required|exists:users,id';
+        } else {
+            // New Walk-in patient must provide name and phone
+            $rules['new_patient_name']  = 'required|string|max:255';
+            $rules['new_patient_phone'] = 'required|string|max:20';
         }
 
-        // 2. Handle User Creation (Walk-in vs Existing)
-        $userId = $request->user_id;
-        if ($request->patient_type === 'new') {
-            $newPatient = User::create([
-                'name' => $request->new_patient_name,
-                'phone' => $request->new_patient_phone,
-                'email' => null, // Walk-in
-                'password' => null,
-                'role' => 'patient',
+        // 3. Run Validation (Now $rules is guaranteed to exist)
+        $validated = $request->validate($rules);
+
+        // --- Database Transaction to Prevent Double Booking ---
+        return DB::transaction(function () use ($request) {
+            
+            // A. Check for Double Bookings (Race Condition Lock)
+            $conflicts = Appointment::where('doctor_id', $request->doctor_id)
+                ->where('appointment_date', $request->appointment_date)
+                ->where('appointment_time', $request->appointment_time)
+                ->whereIn('status', ['confirmed', 'pending'])
+                ->lockForUpdate()
+                ->count();
+
+            if ($conflicts > 0) {
+                 return redirect()->back()->withInput()->with('error', 'Slot was just taken! Please choose another.');
+            }
+
+            // B. Determine User ID (Find Existing or Create New)
+            $userId = $request->user_id;
+            
+            // If Walk-in, create the account silently
+            if ($request->patient_type === 'new') {
+                $newPatient = User::create([
+                    'name'     => $request->new_patient_name,
+                    'phone'    => $request->new_patient_phone,
+                    'email'    => null, // Walk-ins might not have email
+                    'password' => null, // No password needed yet
+                    'role'     => 'patient',
+                ]);
+                $userId = $newPatient->id;
+            }
+
+            // C. Get Price
+            $service = Service::findOrFail($request->service_id);
+
+            // D. Create the Appointment
+            Appointment::create([
+                'user_id'          => $userId,
+                'doctor_id'        => $request->doctor_id,
+                'service_id'       => $request->service_id,
+                'price'            => $service->price,
+                'appointment_date' => $request->appointment_date,
+                'appointment_time' => $request->appointment_time,
+                'duration_minutes' => $request->duration_minutes,
+                'status'           => 'confirmed' // Admin bookings are confirmed immediately
             ]);
-            $userId = $newPatient->id;
-        }
 
-        // 3. Get Service Price (Snapshot Logic)
-        $service = Service::findOrFail($request->service_id);
-
-        // 4. Create Appointment
-        Appointment::create([
-            'user_id' => $userId,
-            'doctor_id' => $request->doctor_id,
-            'service_id' => $request->service_id,
-            'price' => $service->price, // <--- LEDGER FIX: Save price here
-            'appointment_date' => $request->appointment_date,
-            'appointment_time' => $request->appointment_time,
-            'duration_minutes' => $request->duration_minutes,
-            'status' => 'confirmed'
-        ]);
-
-        return redirect()->route('admin.appointments.index', ['status' => 'confirmed'])
-            ->with('success', 'Appointment booked successfully.');
-    });
-}
-
+            return redirect()->route('admin.appointments.index', ['status' => 'confirmed'])
+                ->with('success', 'Appointment booked successfully.');
+        });
+    }
+    
     // --- 4. CONFIRM ACTION ---
     public function confirm(Request $request, $id)
     {

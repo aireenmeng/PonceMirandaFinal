@@ -14,7 +14,7 @@ use App\Http\Controllers\PatientHistoryController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Api\CalendarController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PublicController; // <--- MAKE SURE THIS IS IMPORTED
+use App\Http\Controllers\PublicController;
 use App\Http\Controllers\Doctor\DoctorScheduleController;
 
 /*
@@ -23,7 +23,7 @@ use App\Http\Controllers\Doctor\DoctorScheduleController;
 |--------------------------------------------------------------------------
 */
 
-// 1. THE HOME PAGE (This fixes the issue)
+// 1. THE HOME PAGE
 Route::get('/login', [PublicController::class, 'index'])->name('home');
 
 // 2. OTHER PUBLIC PAGES
@@ -36,12 +36,11 @@ Route::get('/home', LoginRedirectController::class)->middleware(['auth'])->name(
 
 // --- SHARED ROUTES (Admins, Doctors, Patients) ---
 Route::middleware(['auth', 'verified'])->group(function () {
-    // Profile Management
-    // These names MUST match what is in your javascript fetch() calls
+    // API Routes for Calendar
     Route::get('/api/calendar/events', [CalendarController::class, 'getEvents'])->name('api.calendar');
     Route::get('/api/calendar/details', [CalendarController::class, 'getDayDetails'])->name('api.day_details');
     
-    // Profile (Shared)
+    // Profile Management
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -49,7 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // --- PATIENT ROUTES (Role: patient) ---
 Route::middleware(['auth', 'role:patient', 'verified'])->group(function () {
-    // 1. Dashboard (The Home Screen)
+    // 1. Dashboard
     Route::get('/dashboard', [PatientHomeController::class, 'index'])->name('dashboard');
 
     // 2. Single Page Booking Wizard
@@ -57,9 +56,9 @@ Route::middleware(['auth', 'role:patient', 'verified'])->group(function () {
     Route::post('/book-appointment', [PatientBookingController::class, 'store'])->name('patient.booking.store');
 
     // 3. Full History
-    Route::get('/my-history', [App\Http\Controllers\PatientHistoryController::class, 'index'])->name('patient.history');
-    Route::get('/my-appointments', [App\Http\Controllers\PatientHistoryController::class, 'index'])->name('patient.appointments');
-Route::post('/my-appointments/{id}/cancel', [App\Http\Controllers\PatientHistoryController::class, 'cancel'])->name('patient.cancel');
+    Route::get('/my-history', [PatientHistoryController::class, 'index'])->name('patient.history');
+    Route::get('/my-appointments', [PatientHistoryController::class, 'index'])->name('patient.appointments');
+    Route::post('/my-appointments/{id}/cancel', [PatientHistoryController::class, 'cancel'])->name('patient.cancel');
 });
 
 // --- DOCTOR ROUTES ---
@@ -68,19 +67,20 @@ Route::middleware(['auth', 'role:doctor', 'verified'])->prefix('doctor')->name('
     // 1. Dashboard
     Route::get('/dashboard', [App\Http\Controllers\Doctor\DoctorDashboardController::class, 'index'])->name('dashboard');
     
-    // Diagnosis Update (Unified PUT route)
+    // Diagnosis Update
     Route::put('appointments/{appointment}/diagnosis', [App\Http\Controllers\Doctor\DoctorDashboardController::class, 'updateDiagnosis'])->name('appointments.updateDiagnosis');
 
-    // 3. SCHEDULE MANAGEMENT (Restored)
-    Route::get('/schedule', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'index'])->name('schedule.index');
-    Route::post('/schedule/update-date', [App\Http\Controllers\Doctor\DoctorScheduleController::class, 'updateDateSchedule'])->name('schedule.updateDate');
+    // 3. SCHEDULE MANAGEMENT
+    Route::get('/schedule', [DoctorScheduleController::class, 'index'])->name('schedule.index');
+    Route::post('/schedule/update-date', [DoctorScheduleController::class, 'updateDateSchedule'])->name('schedule.updateDate');
     
-    // Consultations (now lists patients)
+    // *** NEW ROUTE ADDED HERE ***
+    Route::post('/schedule/toggle', [DoctorScheduleController::class, 'toggleSlot'])->name('schedule.toggle');
+    // ****************************
+    
+    // Consultations
     Route::get('consultations', [App\Http\Controllers\Doctor\DoctorDashboardController::class, 'patientList'])->name('consultations');
-    // Detailed consultation history for a specific patient
     Route::get('consultations/{patient}', [App\Http\Controllers\Doctor\DoctorDashboardController::class, 'showPatientConsultations'])->name('patient.consultations');
-    
-    // Today's Consultations
     Route::get('todays-consultations', [App\Http\Controllers\Doctor\DoctorDashboardController::class, 'todaysConsultations'])->name('todaysConsultations');
 });
 
@@ -90,7 +90,7 @@ Route::middleware(['auth', 'role:admin', 'verified'])->prefix('admin')->name('ad
     // Dashboard
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     
-    // --- 1. SERVICES (Inventory) ---
+    // --- 1. SERVICES ---
     Route::get('/services', [ServiceController::class, 'index'])->name('services.index'); 
     Route::get('/services/create', [ServiceController::class, 'create'])->name('services.create');
     Route::post('/services', [ServiceController::class, 'store'])->name('services.store');
@@ -111,7 +111,6 @@ Route::middleware(['auth', 'role:admin', 'verified'])->prefix('admin')->name('ad
     Route::get('/appointments/create', [AppointmentController::class, 'create'])->name('appointments.create');
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::get('/appointments/{id}', [AppointmentController::class, 'show'])->name('appointments.show');
-    // New Edit/Update routes
     Route::get('/appointments/{id}/edit', [AppointmentController::class, 'edit'])->name('appointments.edit');
     Route::put('/appointments/{id}', [AppointmentController::class, 'update'])->name('appointments.update');
     
@@ -119,12 +118,8 @@ Route::middleware(['auth', 'role:admin', 'verified'])->prefix('admin')->name('ad
     Route::post('/appointments/{id}/confirm', [AppointmentController::class, 'confirm'])->name('appointments.confirm');
     Route::post('/appointments/{id}/cancel', [AppointmentController::class, 'cancel'])->name('appointments.cancel');
     Route::post('/appointments/{id}/complete', [AppointmentController::class, 'complete'])->name('appointments.complete');
-    // New Restore route
     Route::post('/appointments/{id}/restore', [AppointmentController::class, 'restore'])->name('appointments.restore');
-    
-    // Manual Blocking (Admin Only)
     Route::post('/appointments/block-slot', [AppointmentController::class, 'blockSlot'])->name('appointments.block');
-    // Available Slots for Walk-in Booking
     Route::get('/appointments/available-slots', [AppointmentController::class, 'getAvailableSlots'])->name('appointments.availableSlots');
 
     // --- 4. PATIENTS ---
@@ -141,16 +136,13 @@ Route::middleware(['auth', 'role:admin', 'verified'])->prefix('admin')->name('ad
     Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
     Route::get('/staff/create', [StaffController::class, 'create'])->name('staff.create');
     Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
-    // ADD THESE TWO LINES:
     Route::get('/staff/{id}/edit', [StaffController::class, 'edit'])->name('staff.edit');
     Route::put('/staff/{id}', [StaffController::class, 'update'])->name('staff.update');
-    // -------------------
     Route::delete('/staff/{id}', [StaffController::class, 'destroy'])->name('staff.destroy');
     Route::post('/staff/{id}/restore', [StaffController::class, 'restore'])->name('staff.restore');
 
-    // Add this inside your 'admin' or 'auth' group
-// CHANGE TO THIS (Correct):
-Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    // --- REPORTS ---
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 });
 
 require __DIR__.'/auth.php';

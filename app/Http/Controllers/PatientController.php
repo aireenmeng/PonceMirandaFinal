@@ -8,33 +8,52 @@ use Illuminate\Validation\Rule;
 
 class PatientController extends Controller
 {
+    // In app/Http/Controllers/PatientController.php
     public function index(Request $request)
     {
         $view = $request->get('view', 'active');
         $search = $request->get('search');
 
+        // Base Query: Start with patients only
         $query = User::where('role', 'patient');
 
-        // Apply Search to all tabs
+        // Apply Search (works across all tabs)
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
+        // --- LOGIC FIXES ---
         if ($view === 'pending') {
-            // Users invited but not yet verified
-            $patients = $query->whereNull('email_verified_at')->orderBy('created_at', 'desc')->paginate(10);
+            // PENDING: Has an email, but hasn't verified it yet.
+            // Exclude Walk-ins (who have null email)
+            $patients = $query->whereNull('email_verified_at')
+                            ->whereNotNull('email') 
+                            ->orderBy('created_at', 'desc')
+                            ->paginate(10);
+
+        } elseif ($view === 'walkin') {
+            // WALK-IN: Patients with NO email address (manually created)
+            $patients = $query->whereNull('email')
+                            ->orderBy('created_at', 'desc')
+                            ->paginate(10);
+
         } elseif ($view === 'archived') {
-            $patients = $query->onlyTrashed()->paginate(10);
+            // ARCHIVED: Soft deleted users
+            $patients = User::onlyTrashed()
+                            ->where('role', 'patient')
+                            ->paginate(10);
+
         } else {
-            // Verified Users OR Walk-in Patients (who don't have email for verification)
+            // ACTIVE: Verified Email OR Walk-ins (since they don't need verification)
+            // This is your main list.
             $patients = $query->where(function($q) {
-                $q->whereNotNull('email_verified_at')
-                  ->orWhereNull('email'); // Include walk-in patients
-            })
-                ->withCount('appointments')
+                    $q->whereNotNull('email_verified_at') // Verified Online Users
+                    ->orWhereNull('email');             // Walk-in Patients
+                })
+                ->withCount('appointments') // Eager load count
                 ->orderBy('name')
                 ->paginate(10);
         }
@@ -44,14 +63,17 @@ class PatientController extends Controller
 
     // 2. SHOW & EDIT (These make your buttons work)
     public function show($id)
-    {
-        $patient = User::where('role', 'patient')->withTrashed()->with(['appointments' => function($q) {
-            $q->orderBy('appointment_date', 'desc');
-        }, 'appointments.doctor', 'appointments.service'])->findOrFail($id);
+{
+    // 1. Find the patient
+    $patient = User::with(['appointments', 'appointments.doctor', 'appointments.service'])->findOrFail($id);
+    
+    // 2. FIX: Calculate the current status based on their latest appointment
+    $lastAppt = $patient->appointments()->latest()->first();
+    $currentStatus = $lastAppt ? $lastAppt->status : 'New';
 
-        return view('admin.patients.show', compact('patient'));
-    }
-
+    // 3. Pass it to the view
+    return view('admin.patients.show', compact('patient', 'currentStatus'));
+}
     public function edit($id)
     {
         $patient = User::where('role', 'patient')->findOrFail($id);

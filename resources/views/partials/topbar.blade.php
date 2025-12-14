@@ -29,16 +29,20 @@
                 </a>
                 <div class="dropdown-divider"></div>
                 
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="dropdown-item text-danger">
-                        <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2"></i>
-                        Logout
-                    </button>
-                </form>
+                {{-- FIX: Standard "Link + Hidden Form" method to prevent 419 Errors --}}
+                <a class="dropdown-item text-danger" href="{{ route('logout') }}" 
+                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2"></i>
+                    Logout
+                </a>
             </div>
         </li>
 
     </ul>
 
 </nav>
+
+{{-- HIDDEN LOGOUT FORM: Placed outside the nav to prevent UI conflicts --}}
+<form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+    @csrf
+</form>

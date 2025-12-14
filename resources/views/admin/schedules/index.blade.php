@@ -19,14 +19,13 @@
             <div class="card shadow-lg mb-4 border-0">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white border-bottom-0">
                     <h6 class="m-0 font-weight-bold text-primary">Monthly Overview</h6>
-                    <div class="d-flex align-items-center">
-                        <select id="doctorFilter" class="custom-select custom-select-sm shadow-sm border-0 bg-light text-dark font-weight-bold mr-2" style="width: 250px;">
-                            <option value="">-- Select Doctor --</option>
-                            @foreach($doctors as $doc)
-                                <option value="{{ $doc->id }}">Dr. {{ $doc->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    
+                    <select id="doctorFilter" class="custom-select custom-select-sm shadow-sm border-0 bg-light text-dark font-weight-bold" style="width: 250px;">
+                        <option value="">-- Select Doctor --</option>
+                        @foreach($doctors as $doc)
+                            <option value="{{ $doc->id }}">Dr. {{ $doc->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="card-body p-0">
                     <div id="calendar" class="p-4"></div>
@@ -173,11 +172,6 @@
         });
 
         calendar.render();
-
-        // New: External Next Month Button Listener
-        document.getElementById('nextMonthBtn').addEventListener('click', function() {
-            calendar.next();
-        });
 
         doctorSelect.addEventListener('change', function() {
             calendar.refetchEvents();
