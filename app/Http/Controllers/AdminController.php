@@ -7,7 +7,7 @@ use App\Models\Appointment;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-
+//hi
 class AdminController extends Controller
 {
     public function dashboard()
