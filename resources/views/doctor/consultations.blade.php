@@ -67,7 +67,11 @@
 
                             {{-- Contact Info --}}
                             <td class="align-middle">
-                                <div class="font-weight-bold">{{ $patient->phone ?? 'N/A' }}</div>
+                                @if($patient->phone)
+                                    <div class="font-weight-bold"><a href="tel:{{ $patient->phone }}" class="text-dark text-decoration-none">{{ $patient->phone }}</a></div>
+                                @else
+                                    <div class="font-weight-bold text-muted">N/A</div>
+                                @endif
                             </td>
 
                             {{-- Last Consultation Date (for current doctor only) --}}

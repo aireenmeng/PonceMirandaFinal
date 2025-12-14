@@ -8,9 +8,17 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Services\AppointmentService; 
 
 class AppointmentController extends Controller
 {
+    protected $appointmentService;
+
+    public function __construct(AppointmentService $appointmentService)
+    {
+        $this->appointmentService = $appointmentService;
+    }
+
     public function index(Request $request)
     {
         // 1. Filter Parameters
@@ -18,14 +26,12 @@ class AppointmentController extends Controller
         $search = $request->get('search');
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
-        $date = $request->get('date'); // New parameter for single date filter
+        $date = $request->get('date'); 
 
         // 2. Sorting Parameters (New Logic)
-        // Default sort: Appointment Date, Ascending (Nearest to Far)
         $sort = $request->get('sort', 'appointment_date'); 
         $direction = $request->get('direction', 'asc');
 
-        // Whitelist allowed sort columns to prevent errors/injection
         $allowedSorts = ['appointment_date', 'appointment_time', 'created_at', 'id'];
         if (!in_array($sort, $allowedSorts)) {
             $sort = 'appointment_date';
@@ -57,7 +63,6 @@ class AppointmentController extends Controller
         // 4. Apply Sorting
         $query->orderBy($sort, $direction);
         
-        // Secondary sort for cleaner list (time)
         if ($sort == 'appointment_date') {
             $query->orderBy('appointment_time', $direction);
         }
@@ -66,43 +71,91 @@ class AppointmentController extends Controller
 
         $currentTab = $date ? 'today' : $status;
 
-        // Pass sort/direction variables to view so the links work
         return view('admin.appointments.index', compact('appointments', 'status', 'search', 'startDate', 'endDate', 'sort', 'direction', 'date', 'currentTab'));
     }
 
     // --- 2. SHOW WALK-IN FORM ---
-    public function create()
+    public function create(Request $request) 
     {
         $patients = User::where('role', 'patient')->get();
         $doctors = User::where('role', 'doctor')->get();
         $services = Service::all();
+        $date = $request->input('date', date('Y-m-d')); 
 
-        return view('admin.appointments.create', compact('patients', 'doctors', 'services'));
+        return view('admin.appointments.create', compact('patients', 'doctors', 'services', 'date'));
     }
 
     // --- 3. STORE (Saves MINUTES now) ---
     public function store(Request $request)
     {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
+        // Base validation rules
+        $rules = [
             'doctor_id' => 'required|exists:users,id',
             'service_id' => 'required|exists:services,id',
-            'appointment_date' => 'required|date',
-            'appointment_time' => 'required',
-            // CRITICAL CHANGE: Validating minutes (min 30)
+            'appointment_date' => [
+                'required',
+                'date',
+                'after_or_equal:today', 
+                'before_or_equal:' . \Carbon\Carbon::now()->addMonths(2)->endOfMonth()->toDateString(), 
+            ],
+            'appointment_time' => [
+                'required',
+                function ($attribute, $value, $fail) use ($request) {
+                    $appointmentDateTime = \Carbon\Carbon::parse($request->appointment_date . ' ' . $value);
+                    if ($appointmentDateTime->isToday() && $appointmentDateTime->lt(\Carbon\Carbon::now())) {
+                        $fail('The ' . $attribute . ' must be a future time for today\'s appointments.');
+                    }
+                },
+            ],
             'duration_minutes' => 'required|integer|min:30', 
+            'patient_type' => 'required|in:existing,new', // New rule for patient type
+        ];
+
+        // Conditional validation based on patient_type
+        if ($request->patient_type === 'existing') {
+            $rules['user_id'] = 'required|exists:users,id';
+        } else { // new patient
+            $rules['new_patient_name'] = 'required|string|max:255';
+            $rules['new_patient_phone'] = 'required|numeric|digits:11';
+        }
+
+        $request->validate($rules);
+
+        $userId = null;
+        if ($request->patient_type === 'new') {
+            // Create new walk-in patient
+            $newPatient = User::create([
+                'name' => $request->new_patient_name,
+                'phone' => $request->new_patient_phone,
+                'email' => null, // No email for walk-in
+                'password' => null, // No password for walk-in
+                'role' => 'patient', // Assign patient role
+            ]);
+            $userId = $newPatient->id;
+        } else {
+            $userId = $request->user_id;
+        }
+
+        // Check for conflicts using the AppointmentService
+        $conflicts = $this->appointmentService->checkConflicts([
+            'doctor_id' => $request->doctor_id,
+            'appointment_date' => $request->appointment_date,
+            'appointment_time' => $request->appointment_time,
+            'duration_minutes' => $request->duration_minutes,
         ]);
 
-        // (Optional: You can re-add conflict checking here if you want extra safety)
+        if (!empty($conflicts)) {
+            return redirect()->back()->withErrors($conflicts)->withInput();
+        }
         
         Appointment::create([
-            'user_id' => $request->user_id,
+            'user_id' => $userId, // Use the determined user ID
             'doctor_id' => $request->doctor_id,
             'service_id' => $request->service_id,
             'appointment_date' => $request->appointment_date,
             'appointment_time' => $request->appointment_time,
-            'duration_minutes' => $request->duration_minutes, // Saving Minutes
-            'status' => 'confirmed' // Walk-ins are instantly confirmed
+            'duration_minutes' => $request->duration_minutes, 
+            'status' => 'confirmed' 
         ]);
 
         return redirect()->route('admin.appointments.index', ['status' => 'confirmed'])
@@ -119,7 +172,7 @@ class AppointmentController extends Controller
     }
 
     // --- 5. COMPLETE ACTION (Revenue Recording) ---
-    public function complete(Request $request, $id) // Added Request $request
+    public function complete(Request $request, $id) 
     {
         $appt = Appointment::findOrFail($id);
         $appointmentDateTime = $appt->appointment_date->setTimeFromTimeString($appt->appointment_time);
@@ -146,8 +199,8 @@ class AppointmentController extends Controller
         $appt->update([
             'status' => 'cancelled',
             'cancellation_reason' => $request->cancellation_reason,
-            'cancelled_by' => Auth::id(), // Tracks WHO clicked the button
-            'cancelled_at' => now(),      // Tracks WHEN
+            'cancelled_by' => Auth::id(), 
+            'cancelled_at' => now(),      
         ]);
 
         return redirect()->route('admin.appointments.index', $request->all())->with('success', 'Appointment cancelled.');
@@ -181,19 +234,19 @@ class AppointmentController extends Controller
     {
         $appointment = Appointment::findOrFail($id);
 
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
+        // Base validation rules
+        $rules = [
+            'user_id' => 'required|exists:users,id', // Assuming user_id is always present for update
             'doctor_id' => 'required|exists:users,id',
             'service_id' => 'required|exists:services,id',
             'appointment_date' => [
                 'required',
                 'date',
-                'after_or_equal:today', // Cannot edit to past date
-                'before_or_equal:' . \Carbon\Carbon::now()->addMonths(2)->endOfMonth()->toDateString(), // 2 months limit
+                'after_or_equal:today', 
+                'before_or_equal:' . \Carbon\Carbon::now()->addMonths(2)->endOfMonth()->toDateString(), 
             ],
             'appointment_time' => [
                 'required',
-                // Custom rule: if date is today, then time must be in future (relative to now)
                 function ($attribute, $value, $fail) use ($request) {
                     $appointmentDateTime = \Carbon\Carbon::parse($request->appointment_date . ' ' . $value);
                     if ($appointmentDateTime->isToday() && $appointmentDateTime->lt(\Carbon\Carbon::now())) {
@@ -202,72 +255,21 @@ class AppointmentController extends Controller
                 },
             ],
             'duration_minutes' => 'required|integer|min:30',
-        ]);
+        ];
+        $request->validate($rules);
 
-        $requestedDate = Carbon::parse($request->appointment_date);
-        $requestedStartTime = Carbon::parse($request->appointment_time);
-        $durationMinutes = (int) $request->duration_minutes; // Explicitly cast to integer
-        $requestedEndTime = $requestedStartTime->copy()->addMinutes($durationMinutes);
+        // Check for conflicts using the AppointmentService, excluding the current appointment
+        $conflicts = $this->appointmentService->checkConflicts([
+            'doctor_id' => $request->doctor_id,
+            'appointment_date' => $request->appointment_date,
+            'appointment_time' => $request->appointment_time,
+            'duration_minutes' => $request->duration_minutes,
+        ], $appointment->id); 
+
+        if (!empty($conflicts)) {
+            return redirect()->back()->withErrors($conflicts)->withInput();
+        }
         
-        // --- 1. Check Doctor's Schedule ---
-        $schedule = \App\Models\Schedule::where('doctor_id', $request->doctor_id)
-            ->where('date', $requestedDate)
-            ->first();
-
-        // Implement virtual schedule for Mon-Sat 09:00-17:00 if no explicit schedule exists
-        if (!$schedule) {
-            if ($requestedDate->isSunday()) {
-                return redirect()->route('admin.appointments.index', $request->all())->with('error', 'Doctor is not available on Sundays.');
-            }
-            // Use virtual schedule: 09:00-17:00, max_appointments: 20
-            $schedule = new \App\Models\Schedule([
-                'start_time' => '09:00:00',
-                'end_time' => '17:00:00',
-                'max_appointments' => 20
-            ]);
-        }
-
-        $scheduleStartTime = Carbon::parse($schedule->start_time);
-        $scheduleEndTime = Carbon::parse($schedule->end_time);
-
-        // Check if doctor is on day off (00:00 - 00:00)
-        if ($scheduleStartTime->format('H:i') === '00:00' && $scheduleEndTime->format('H:i') === '00:00') {
-            return redirect()->route('admin.appointments.index', $request->all())->with('error', 'Doctor is on a day off.');
-        }
-
-        // Check if appointment falls within doctor's working hours
-        if ($requestedStartTime->lt($scheduleStartTime) || $requestedEndTime->gt($scheduleEndTime)) {
-            return redirect()->route('admin.appointments.index', $request->all())->with('error', 'Appointment is outside doctor\'s working hours (' . $scheduleStartTime->format('h:i A') . ' - ' . $scheduleEndTime->format('h:i A') . ').');
-        }
-
-        // --- 2. Check Max Appointments ---
-        $currentAppointmentsCount = Appointment::where('doctor_id', $request->doctor_id)
-            ->where('appointment_date', $requestedDate)
-            ->where('status', '!=', 'cancelled')
-            ->where('id', '!=', $appointment->id) // Exclude current appointment
-            ->count();
-
-        if ($currentAppointmentsCount >= $schedule->max_appointments) {
-            return redirect()->route('admin.appointments.index', $request->all())->with('error', 'Doctor\'s schedule is full for this day.');
-        }
-
-        // --- 3. Check for Overlapping Appointments ---
-        $overlap = Appointment::where('doctor_id', $request->doctor_id)
-            ->where('appointment_date', $requestedDate)
-            ->where('id', '!=', $appointment->id) // Exclude current appointment
-            ->where('status', '!=', 'cancelled')
-            ->where(function($query) use ($requestedStartTime, $requestedEndTime) {
-                $query->where(function($q) use ($requestedStartTime, $requestedEndTime) {
-                    $q->where('appointment_time', '<', $requestedEndTime->format('H:i:s'))
-                      ->whereRaw('ADDTIME(appointment_time, SEC_TO_TIME(duration_minutes * 60)) > ?', [$requestedStartTime->format('H:i:s')]);
-                });
-            })
-            ->count();
-
-        if ($overlap > 0) {
-            return redirect()->route('admin.appointments.index', $request->all())->with('error', 'Appointment time overlaps with an existing appointment.');
-        }
-
         $appointment->update($request->all());
 
         return redirect()->route('admin.appointments.index', $request->all())
@@ -283,7 +285,6 @@ class AppointmentController extends Controller
             return redirect()->route('admin.appointments.index', $request->all())->with('error', 'Only cancelled appointments can be restored.');
         }
 
-        // Restore to pending status, clear cancellation details
         $appointment->update([
             'status' => 'pending',
             'cancellation_reason' => null,
@@ -291,13 +292,74 @@ class AppointmentController extends Controller
             'cancelled_at' => null,
         ]);
 
-        // Optional: Trigger re-evaluation of schedule/slot availability here if needed
-        // For simplicity, we assume restoring to pending means it will be manually re-confirmed
-        // or re-checked against schedule by an admin.
-
         return redirect()->route('admin.appointments.index', array_merge($request->query(), ['status' => 'pending']))
             ->with('success', 'Appointment restored successfully to pending status.');
     }
+
+    // --- 12. Get Available Slots (AJAX) ---
+    public function getAvailableSlots(Request $request)
+    {
+        $doctorId = $request->input('doctor_id');
+        $date = Carbon::parse($request->input('date'));
+        $selectedDuration = (int) $request->input('duration', 30); 
+
+        if (!$doctorId || !$date) {
+            return response()->json(['error' => 'Doctor ID and Date are required.'], 400);
+        }
+
+        $slots = [];
+        $schedule = \App\Models\Schedule::where('doctor_id', $doctorId)
+            ->where('date', $date->toDateString())
+            ->first();
+
+        if (!$schedule) {
+            if ($date->isSunday()) {
+                return response()->json(['message' => 'Doctor is not available on Sundays.'], 200);
+            }
+            $schedule = new \App\Models\Schedule([
+                'start_time' => '09:00:00',
+                'end_time' => '17:00:00',
+                'max_appointments' => 20
+            ]);
+        }
+
+        $scheduleStartTime = Carbon::parse($schedule->start_time);
+        $scheduleEndTime = Carbon::parse($schedule->end_time);
+
+        if ($scheduleStartTime->format('H:i') === '00:00' && $scheduleEndTime->format('H:i') === '00:00') {
+            return response()->json(['message' => 'Doctor is on a day off.'], 200);
+        }
+
+        $currentTime = $scheduleStartTime->copy();
+        
+        while ($currentTime->lt($scheduleEndTime)) {
+            $slotEndTime = $currentTime->copy()->addMinutes($selectedDuration);
+
+            if ($slotEndTime->gt($scheduleEndTime)) {
+                break; 
+            }
+
+            $potentialAppointmentData = [
+                'doctor_id' => $doctorId,
+                'appointment_date' => $date->toDateString(),
+                'appointment_time' => $currentTime->format('H:i:s'),
+                'duration_minutes' => $selectedDuration,
+            ];
+
+            $conflicts = $this->appointmentService->checkConflicts($potentialAppointmentData);
+
+            if (empty($conflicts)) {
+                $slots[] = [
+                    'time' => $currentTime->format('H:i:s'),
+                    'display' => $currentTime->format('h:i A'),
+                ];
+            }
+            $currentTime->addMinutes($selectedDuration);
+        }
+
+        return response()->json(['slots' => $slots]);
+    }
+
 
     // --- 11. BLOCK SLOT (Ajax for Calendar) ---
     public function blockSlot(Request $request)
@@ -308,7 +370,7 @@ class AppointmentController extends Controller
                 'appointment_date' => $request->date,
                 'appointment_time' => $request->time,
                 'status' => 'blocked', 
-                'duration_minutes' => 60, // Default manual block is 1 hour
+                'duration_minutes' => 60, 
                 'service_id' => null,  
                 'user_id' => null      
             ]);

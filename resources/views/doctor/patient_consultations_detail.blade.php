@@ -19,7 +19,13 @@
                 <div class="col-md-6">
                     <p class="mb-1"><strong>Name:</strong> {{ $patient->name }}</p>
                     <p class="mb-1"><strong>Email:</strong> {{ $patient->email }}</p>
-                    <p class="mb-1"><strong>Phone:</strong> {{ $patient->phone ?? 'N/A' }}</p>
+                    <p class="mb-1"><strong>Phone:</strong> 
+                        @if($patient->phone)
+                            <a href="tel:{{ $patient->phone }}" class="text-dark text-decoration-none">{{ $patient->phone }}</a>
+                        @else
+                            N/A
+                        @endif
+                    </p>
                 </div>
                 <div class="col-md-6 text-right">
                     {{-- Optionally add more patient details or actions here --}}

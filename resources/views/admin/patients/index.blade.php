@@ -67,7 +67,14 @@
                         @foreach($patients as $patient)
                         <tr>
                             <td class="font-weight-bold">{{ $patient->name }}</td>
-                            <td>{{ $patient->email }}<br><small>{{ $patient->phone }}</small></td>
+                            <td>
+                                {{ $patient->email }}<br>
+                                @if($patient->phone)
+                                    <small><a href="tel:{{ $patient->phone }}" class="text-muted text-decoration-none">{{ $patient->phone }}</a></small>
+                                @else
+                                    <small class="text-muted">No Phone</small>
+                                @endif
+                            </td>
                             <td>{{ $patient->appointments_count }} Records</td>
                             <td>
                                 @if($view == 'archived')

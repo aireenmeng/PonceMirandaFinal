@@ -29,8 +29,11 @@ class PatientController extends Controller
         } elseif ($view === 'archived') {
             $patients = $query->onlyTrashed()->paginate(10);
         } else {
-            // Verified Users
-            $patients = $query->whereNotNull('email_verified_at')
+            // Verified Users OR Walk-in Patients (who don't have email for verification)
+            $patients = $query->where(function($q) {
+                $q->whereNotNull('email_verified_at')
+                  ->orWhereNull('email'); // Include walk-in patients
+            })
                 ->withCount('appointments')
                 ->orderBy('name')
                 ->paginate(10);
@@ -58,7 +61,11 @@ class PatientController extends Controller
     public function update(Request $request, $id)
     {
         $patient = User::findOrFail($id);
-        $request->validate(['name' => 'required', 'email' => 'required|email']);
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'email', Rule::unique('users')->ignore($patient->id)],
+            'phone' => 'nullable|numeric|digits:11', // Added phone validation
+        ]);
         $patient->update($request->all());
         return redirect()->route('admin.patients.show', $id)->with('success', 'Updated.');
     }
@@ -87,7 +94,7 @@ class PatientController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'phone' => 'nullable|string',
+            'phone' => 'nullable|numeric|digits:11', // Updated phone validation
             'password' => 'required|string|min:8',
         ]);
 

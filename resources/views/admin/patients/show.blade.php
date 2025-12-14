@@ -14,7 +14,13 @@
                 <p class="text-muted">{{ $patient->email }}</p>
                 <hr>
                 <div class="text-left">
-                    <p><strong>Phone:</strong> {{ $patient->phone ?? 'N/A' }}</p>
+                    <p><strong>Phone:</strong> 
+                        @if($patient->phone)
+                            <a href="tel:{{ $patient->phone }}" class="text-dark text-decoration-none">{{ $patient->phone }}</a>
+                        @else
+                            N/A
+                        @endif
+                    </p>
                     <p><strong>Address:</strong> {{ $patient->address ?? 'N/A' }}</p>
                 </div>
             </div>

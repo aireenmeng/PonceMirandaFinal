@@ -59,9 +59,23 @@ class AdminController extends Controller
             $statusStats['cancelled'] ?? 0,
         ];
 
+        // 4. "UP NEXT" for Admin (Earliest confirmed appointment across all doctors)
+        $nextPatient = Appointment::with(['patient', 'doctor', 'service'])
+            ->where('status', 'confirmed')
+            ->where(function($query) {
+                $query->whereDate('appointment_date', '>', Carbon::today())
+                      ->orWhere(function($q) {
+                          $q->whereDate('appointment_date', Carbon::today())
+                            ->whereTime('appointment_time', '>=', Carbon::now()->format('H:i:s'));
+                      });
+            })
+            ->orderBy('appointment_date')
+            ->orderBy('appointment_time')
+            ->first();
+
         return view('admin.dashboard', compact(
             'pendingCount', 'todayAppointments', 'totalPatients', 'earnings',
-            'months', 'revenueData', 'pieData'
+            'months', 'revenueData', 'pieData', 'nextPatient' // Pass nextPatient
         ));
     }
 }

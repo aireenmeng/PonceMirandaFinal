@@ -17,6 +17,42 @@
     {{-- SECTION: OVERVIEW KPIs --}}
     <h2 class="h5 mb-3 text-gray-800 font-weight-bold border-bottom pb-2">Overview</h2>
 
+    {{-- 1. "UP NEXT" HERO CARD for Admin --}}
+    <div class="card shadow mb-4 border-left-primary bg-gradient-light">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="text-primary font-weight-bold text-uppercase mb-1">Clinic's Next Appointment</h5>
+                    @if($nextPatient)
+                        <h2 class="font-weight-bold text-gray-900 mb-1">
+                            {{ $nextPatient->patient->name ?? 'Unknown Patient' }}
+                            <small class="text-muted ml-2">with Dr. {{ $nextPatient->doctor->name ?? 'Unknown Doctor' }}</small>
+                        </h2>
+                        <p class="mb-0 text-muted">
+                            <i class="fas fa-notes-medical mr-1"></i> {{ $nextPatient->service->name }} 
+                            <span class="mx-2">|</span> 
+                            <i class="far fa-clock mr-1"></i> {{ $nextPatient->appointment_date->format('M d, Y') }} @ {{ $nextPatient->appointment_time->format('h:i A') }}
+                        </p>
+                    @else
+                        <h2 class="font-weight-bold text-gray-700 mb-1">No Upcoming Appointments</h2>
+                        <p class="mb-0 text-muted">There are no confirmed appointments scheduled in the near future.</p>
+                    @endif
+                </div>
+                <div class="col-md-4 text-right">
+                    @if($nextPatient)
+                        <a href="{{ route('admin.appointments.show', $nextPatient->id) }}" class="btn btn-primary btn-lg shadow-sm rounded-pill px-4">
+                            View Details <i class="fas fa-arrow-right ml-2"></i>
+                        </a>
+                    @else
+                        <a href="{{ route('admin.appointments.index') }}" class="btn btn-secondary btn-lg shadow-sm rounded-pill px-4">
+                            View All Appointments <i class="fas fa-arrow-right ml-2"></i>
+                        </a>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-success shadow h-100 py-2">

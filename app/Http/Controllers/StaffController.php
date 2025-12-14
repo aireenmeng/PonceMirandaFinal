@@ -44,7 +44,7 @@ class StaffController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'role' => 'required|in:admin,doctor',
-            'phone' => 'nullable|string'
+            'phone' => 'nullable|numeric|digits:11'
         ]);
 
         // 1. Create Staff with RANDOM password
@@ -62,6 +62,31 @@ class StaffController extends Controller
 
         return redirect()->route('admin.staff.index')
             ->with('success', "Invitation sent to new {$request->role}.");
+    }
+
+    // 3. SHOW EDIT FORM
+    public function edit($id)
+    {
+        $staff = User::whereIn('role', ['admin', 'doctor'])->findOrFail($id);
+        return view('admin.staff.edit', compact('staff'));
+    }
+
+    // 4. UPDATE STAFF
+    public function update(Request $request, $id)
+    {
+        $staff = User::whereIn('role', ['admin', 'doctor'])->findOrFail($id);
+        
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'email', \Illuminate\Validation\Rule::unique('users')->ignore($staff->id)],
+            'role' => 'required|in:admin,doctor',
+            'phone' => 'nullable|numeric|digits:11', // Enforce 11-digit phone number
+        ]);
+
+        $staff->update($request->all());
+
+        return redirect()->route('admin.staff.index')
+            ->with('success', "Staff member '{$staff->name}' updated successfully.");
     }
 
     // ARCHIVE (Soft Delete)
