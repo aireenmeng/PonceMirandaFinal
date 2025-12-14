@@ -11,10 +11,10 @@
             <p class="lead mb-4 opacity-90" style="font-size: 1.1rem;">Experience elegant care for your perfect smile.</p>
             
             <div class="d-flex justify-content-center gap-3">
-                <a href="{{ route('login') }}" class="btn btn-outline-primary shadow-sm px-4 mr-2">
+                <a href="{{ route('login') }}" class="btn btn-primary btn-lg shadow-sm px-4 mr-3 rounded-pill">
                     Log In
                 </a>
-                <a href="{{ route('register') }}" class="btn btn-outline-primary px-4">
+                <a href="{{ route('register') }}" class="btn btn-info btn-lg px-4 rounded-pill">
                     New Patient
                 </a>
             </div>
