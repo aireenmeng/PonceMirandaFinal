@@ -62,6 +62,13 @@
                             {{-- Patient Info --}}
                             <td class="align-middle">
                                 <div class="font-weight-bold">{{ $patient->name }}</div>
+                                @if($patient->email === null)
+                                    <small class="badge badge-info text-white">Walk-in</small>
+                                @elseif($patient->email_verified_at === null)
+                                    <small class="badge badge-warning text-dark">Unverified</small>
+                                @else
+                                    <small class="badge badge-success">Active</small>
+                                @endif
                                 <div class="small text-muted">{{ $patient->email }}</div>
                             </td>
 

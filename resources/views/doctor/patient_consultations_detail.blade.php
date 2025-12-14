@@ -17,7 +17,15 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <p class="mb-1"><strong>Name:</strong> {{ $patient->name }}</p>
+                    <p class="mb-1"><strong>Name:</strong> {{ $patient->name }} 
+                        @if($patient->email === null)
+                            <small class="badge badge-info text-white ml-2">Walk-in</small>
+                        @elseif($patient->email_verified_at === null)
+                            <small class="badge badge-warning text-dark ml-2">Unverified</small>
+                        @else
+                            <small class="badge badge-success ml-2">Active</small>
+                        @endif
+                    </p>
                     <p class="mb-1"><strong>Email:</strong> {{ $patient->email }}</p>
                     <p class="mb-1"><strong>Phone:</strong> 
                         @if($patient->phone)

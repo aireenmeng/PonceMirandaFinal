@@ -68,6 +68,15 @@
                             {{-- Patient Info --}}
                             <td class="align-middle">
                                 <div class="font-weight-bold">{{ $appt->patient->name ?? 'Unknown/Archived Patient' }}</div>
+                                @if($appt->patient) {{-- Check if patient relationship exists --}}
+                                    @if($appt->patient->email === null)
+                                        <small class="badge badge-info text-white">Walk-in</small>
+                                    @elseif($appt->patient->email_verified_at === null)
+                                        <small class="badge badge-warning text-dark">Unverified</small>
+                                    @else
+                                        <small class="badge badge-success">Active</small>
+                                    @endif
+                                @endif
                                 <div class="small text-muted">{{ $appt->patient->phone ?? 'No Phone' }}</div>
                             </td>
 

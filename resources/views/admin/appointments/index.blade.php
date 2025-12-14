@@ -128,6 +128,15 @@
                             </td>
                             <td>
                                 <div class="font-weight-bold">{{ $appt->patient->name ?? 'Unknown' }}</div>
+                                @if($appt->patient)
+                                    @if($appt->patient->email === null)
+                                        <small class="badge badge-info text-white">Walk-in</small>
+                                    @elseif($appt->patient->email_verified_at === null)
+                                        <small class="badge badge-warning text-dark">Unverified</small>
+                                    @else
+                                        <small class="badge badge-success">Active</small>
+                                    @endif
+                                @endif
                                 <div class="small text-muted">{{ $appt->patient->phone ?? 'No # ' }}</div>
                             </td>
                             <td>
@@ -201,8 +210,8 @@
             </div>
         </div>
         
-        <div class="card-footer bg-white d-flex justify-content-end">
-            {{ $appointments->links() }}
+        <div class="card-footer bg-white d-flex justify-content-center"> {{-- Center pagination --}}
+            {{ $appointments->links('pagination::bootstrap-4') }} {{-- Explicitly use Bootstrap 4 --}}
         </div>
     </div>
 

@@ -6,15 +6,22 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'Ponce Miranda') }}</title>
     
+    {{-- Google Font: Inter --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <link href="{{ asset('vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/ponce-skin.css') }}" rel="stylesheet">
     
     <style>
+        body, html {
+            font-family: 'Inter', sans-serif;
+        }
         .guest-nav { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .nav-link { color: #5a5c69; font-weight: 600; }
         .nav-link:hover { color: #4e73df; }
-        body { font-family: 'Nunito', sans-serif; }
     </style>
 </head>
 <body class="bg-light">

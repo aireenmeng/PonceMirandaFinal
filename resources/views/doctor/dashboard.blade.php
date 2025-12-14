@@ -110,6 +110,15 @@
                             <td class="font-weight-bold align-middle">{{ $appt->appointment_time->format('h:i A') }}</td>
                             <td class="align-middle">
                                 <div class="font-weight-bold">{{ $appt->patient->name ?? 'Unknown' }}</div>
+                                @if($appt->patient) {{-- Check if patient relationship exists --}}
+                                    @if($appt->patient->email === null)
+                                        <small class="badge badge-info text-white">Walk-in</small>
+                                    @elseif($appt->patient->email_verified_at === null)
+                                        <small class="badge badge-warning text-dark">Unverified</small>
+                                    @else
+                                        <small class="badge badge-success">Active</small>
+                                    @endif
+                                @endif
                                 <div class="small text-muted">#{{ $appt->patient->id ?? '-' }}</div>
                             </td>
                             <td class="align-middle">{{ $appt->service->name }}</td>

@@ -26,7 +26,6 @@
                                 <option value="{{ $doc->id }}">Dr. {{ $doc->name }}</option>
                             @endforeach
                         </select>
-                        <button id="nextMonthBtn" class="btn btn-sm btn-outline-primary shadow-sm rounded-pill px-3">Next Month <i class="fas fa-arrow-right ml-1"></i></button>
                     </div>
                 </div>
                 <div class="card-body p-0">
