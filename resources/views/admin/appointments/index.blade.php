@@ -28,33 +28,29 @@
 
     <div class="card shadow mb-4">
         <div class="card-header py-3">
+            {{-- Primary navigation tabs for filtering appointments by date (Today) or status --}}
             <ul class="nav nav-pills card-header-pills">
-                {{-- TAB: Today (Date Parameter) --}}
                 <li class="nav-item">
                     <a class="nav-link {{ request('date') == now()->format('Y-m-d') ? 'active' : '' }}" 
                     href="{{ route('admin.appointments.index', ['date' => now()->format('Y-m-d')]) }}">
                     Today
                     </a>
                 </li>
-                {{-- TAB: Pending --}}
                 <li class="nav-item">
                     <a class="nav-link {{ $currentTab == 'pending' ? 'active' : '' }}" href="{{ route('admin.appointments.index', ['status' => 'pending']) }}">
                         <i class="fas fa-clock mr-1"></i> Pending
                     </a>
                 </li>
-                {{-- TAB: Confirmed --}}
                 <li class="nav-item">
                     <a class="nav-link {{ $currentTab == 'confirmed' ? 'active' : '' }}" href="{{ route('admin.appointments.index', ['status' => 'confirmed']) }}">
                         <i class="fas fa-check mr-1"></i> Confirmed
                     </a>
                 </li>
-                {{-- TAB: History/Completed --}}
                 <li class="nav-item">
                     <a class="nav-link {{ $currentTab == 'completed' ? 'active' : '' }}" href="{{ route('admin.appointments.index', ['status' => 'completed']) }}">
                         <i class="fas fa-history mr-1"></i> History
                     </a>
                 </li>
-                {{-- TAB: Cancelled --}}
                 <li class="nav-item">
                     <a class="nav-link {{ $currentTab == 'cancelled' ? 'active bg-danger text-white' : 'text-danger' }}" href="{{ route('admin.appointments.index', ['status' => 'cancelled']) }}">
                         <i class="fas fa-ban mr-1"></i> Cancelled
@@ -62,7 +58,7 @@
                 </li>
             </ul>
 
-            {{-- SUB-TABS FOR TODAY VIEW --}}
+            {{-- Secondary filter tabs available only when viewing Today's appointments --}}
             @if(request('date'))
                 <hr class="mt-3 mb-2 border-0">
                 <div class="d-flex align-items-center bg-light rounded p-2">
@@ -93,16 +89,13 @@
             @endif
         </div>
 
-        {{-- SEARCH & FILTER SECTION --}}
+        {{-- Filter and search form that preserves the current view context (Date or Status) --}}
         <div class="card-body bg-light border-bottom">
-            {{-- SMART SEARCH FORM: Remembers your active tab (Date or Status) --}}
             <form action="{{ route('admin.appointments.index') }}" method="GET" class="form-inline">
                 
-                {{-- FIX: Preserve the 'date' (Today tab) if it exists --}}
                 @if(request()->has('date'))
                     <input type="hidden" name="date" value="{{ request('date') }}">
                 @else
-                    {{-- Only preserve 'status' if we are NOT on the date tab --}}
                     <input type="hidden" name="status" value="{{ $status }}">
                 @endif
                 
@@ -128,26 +121,23 @@
             <div class="table-responsive">
                 <table class="table table-striped table-hover mb-0" width="100%" cellspacing="0">
                     
-                    {{-- SORTING LOGIC START --}}
+                    {{-- Determine sorting direction and icon for the interactive header --}}
                     @php
-                        // Helper to calculate the opposite direction for the next click
                         $nextDir = $direction == 'asc' ? 'desc' : 'asc';
-                        // Icon to show current state
                         $sortIcon = $direction == 'asc' ? 'fa-sort-up' : 'fa-sort-down';
                     @endphp
 
                     <thead class="bg-gray-200 text-gray-700">
                         <tr>
                             <th class="pl-4">
-                                {{-- CLICKABLE HEADER --}}
-                                <a href="{{ route('admin.appointments.index', array_merge(request()->all(), ['sort' => 'appointment_date', 'direction' => $nextDir])) }}" class="text-gray-700 text-decoration-none font-weight-bold">
+                                <span class="text-gray-700 text-decoration-none font-weight-bold">
                                     Date & Time 
                                     @if($sort == 'appointment_date') 
                                         <i class="fas {{ $sortIcon }} ml-1"></i> 
                                     @else
                                         <i class="fas fa-sort text-gray-400 ml-1"></i>
                                     @endif
-                                </a>
+                                </span>
                             </th>
                             <th>Patient</th>
                             <th>Doctor / Service</th>
