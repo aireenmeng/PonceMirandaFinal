@@ -24,11 +24,12 @@ class AppointmentController extends Controller
     public function index(Request $request)
     {
         // 1. Filter Parameters
-        $status = $request->get('status', 'pending');
         $search = $request->get('search');
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         $date = $request->get('date'); 
+        
+        $status = $request->get('status'); // Nullable initially
 
         // 2. Sorting Parameters (New Logic)
         $sort = $request->get('sort', 'appointment_date'); 
@@ -45,8 +46,16 @@ class AppointmentController extends Controller
         if ($date) {
             $query->whereDate('appointment_date', $date)
                   ->where('status', '!=', 'blocked'); // Exclude blocked slots
+            
+            // Allow sub-filtering by status within Today view
+            if ($status) {
+                $query->where('status', $status);
+            }
         } else {
+            // Default View
+            $status = $status ?: 'pending';
             $query->where('status', $status);
+            
             if ($startDate && $endDate) {
                 $query->whereBetween('appointment_date', [$startDate, $endDate]);
             }

@@ -61,6 +61,36 @@
                     </a>
                 </li>
             </ul>
+
+            {{-- SUB-TABS FOR TODAY VIEW --}}
+            @if(request('date'))
+                <hr class="mt-3 mb-2 border-0">
+                <div class="d-flex align-items-center bg-light rounded p-2">
+                    <span class="small font-weight-bold text-gray-600 mr-2 text-uppercase">Today's Filter:</span>
+                    <ul class="nav nav-pills nav-fill flex-grow-1">
+                        <li class="nav-item mx-1">
+                            <a class="nav-link {{ !request('status') ? 'active bg-secondary text-white' : 'bg-white text-secondary border' }} py-1 small shadow-sm" 
+                               href="{{ route('admin.appointments.index', ['date' => request('date')]) }}">All</a>
+                        </li>
+                        <li class="nav-item mx-1">
+                            <a class="nav-link {{ request('status') == 'pending' ? 'active bg-warning text-dark' : 'bg-white text-warning border' }} py-1 small shadow-sm" 
+                               href="{{ route('admin.appointments.index', ['date' => request('date'), 'status' => 'pending']) }}">Pending</a>
+                        </li>
+                        <li class="nav-item mx-1">
+                            <a class="nav-link {{ request('status') == 'confirmed' ? 'active bg-primary text-white' : 'bg-white text-primary border' }} py-1 small shadow-sm" 
+                               href="{{ route('admin.appointments.index', ['date' => request('date'), 'status' => 'confirmed']) }}">Confirmed</a>
+                        </li>
+                        <li class="nav-item mx-1">
+                            <a class="nav-link {{ request('status') == 'completed' ? 'active bg-success text-white' : 'bg-white text-success border' }} py-1 small shadow-sm" 
+                               href="{{ route('admin.appointments.index', ['date' => request('date'), 'status' => 'completed']) }}">Completed</a>
+                        </li>
+                        <li class="nav-item mx-1">
+                            <a class="nav-link {{ request('status') == 'cancelled' ? 'active bg-danger text-white' : 'bg-white text-danger border' }} py-1 small shadow-sm" 
+                               href="{{ route('admin.appointments.index', ['date' => request('date'), 'status' => 'cancelled']) }}">Cancelled</a>
+                        </li>
+                    </ul>
+                </div>
+            @endif
         </div>
 
         {{-- SEARCH & FILTER SECTION --}}
@@ -191,12 +221,12 @@
                                     @endphp
 
                                     @if($isFutureAppointment)
-                                        <a href="{{ route('admin.appointments.show', $appt->id) }}" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-eye"></i> View</a>
+                                        <a href="{{ route('admin.appointments.show', array_merge(['id' => $appt->id], request()->query())) }}" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-eye"></i> View</a>
                                         <a href="{{ route('admin.appointments.edit', $appt->id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
                                             <i class="fas fa-edit"></i> Edit
                                         </a>
                                     @else
-                                        <a href="{{ route('admin.appointments.show', $appt->id) }}" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-eye"></i> View</a>
+                                        <a href="{{ route('admin.appointments.show', array_merge(['id' => $appt->id], request()->query())) }}" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-eye"></i> View</a>
                                         
                                         @if($appt->status == 'pending')
                                             <form action="{{ route('admin.appointments.confirm', $appt->id) }}" method="POST" class="d-inline">
