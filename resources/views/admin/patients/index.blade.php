@@ -80,6 +80,10 @@
                                     <form action="{{ route('admin.patients.restore', $patient->id) }}" method="POST" class="d-inline">
                                         @csrf <button class="btn btn-primary btn-sm rounded-pill px-3">Restore</button>
                                     </form>
+                                    <form action="{{ route('admin.patients.forceDelete', $patient->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this patient? This action cannot be undone.');">
+                                        @csrf @method('DELETE')
+                                        <button class="btn btn-danger btn-sm rounded-pill px-3 ml-1">Delete</button>
+                                    </form>
                                 @else
                                     <a href="{{ route('admin.patients.show', $patient->id) }}" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-eye"></i> View</a>
                                     <form action="{{ route('admin.patients.destroy', $patient->id) }}" method="POST" style="display:inline" onsubmit="return confirm('Archive patient: {{ $patient->name }}?');">

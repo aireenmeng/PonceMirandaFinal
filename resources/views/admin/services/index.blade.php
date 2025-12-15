@@ -60,6 +60,12 @@
                                             <i class="fas fa-trash-restore"></i> Restore
                                         </button>
                                     </form>
+                                    <form action="{{ route('admin.services.forceDelete', $service->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Permanently delete this service? This action cannot be undone.');">
+                                        @csrf @method('DELETE')
+                                        <button class="btn btn-danger btn-sm rounded-pill px-3 ml-1" title="Permanently Delete">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </form>
                                 @else
                                     <a href="{{ route('admin.services.edit', $service->id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3" title="Edit">
                                         <i class="fas fa-pen"></i> Edit

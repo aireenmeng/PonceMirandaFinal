@@ -55,12 +55,20 @@
                         <td>{{ $user->email }}</td>
                         <td class="text-right">
                             @if($view == 'archived')
-                                <form action="{{ route('admin.staff.restore', $user->id) }}" method="POST">
-                                    @csrf
-                                    <button class="btn btn-success btn-sm shadow-sm">
-                                        <i class="fas fa-trash-restore mr-1"></i> Restore
-                                    </button>
-                                </form>
+                                <div class="d-inline-flex">
+                                    <form action="{{ route('admin.staff.restore', $user->id) }}" method="POST" class="mr-1">
+                                        @csrf
+                                        <button class="btn btn-success btn-sm shadow-sm">
+                                            <i class="fas fa-trash-restore mr-1"></i> Restore
+                                        </button>
+                                    </form>
+                                    <form action="{{ route('admin.staff.forceDelete', $user->id) }}" method="POST" onsubmit="return confirm('Permanently delete this staff member? This action cannot be undone.');">
+                                        @csrf @method('DELETE')
+                                        <button class="btn btn-danger btn-sm shadow-sm">
+                                            <i class="fas fa-trash-alt mr-1"></i> Delete
+                                        </button>
+                                    </form>
+                                </div>
                             @else
                                 {{-- EDIT BUTTON (Added) --}}
                                 <a href="{{ route('admin.staff.edit', $user->id) }}" class="btn btn-info btn-sm shadow-sm mr-1">

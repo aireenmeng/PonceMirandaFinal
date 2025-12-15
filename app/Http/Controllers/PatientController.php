@@ -196,6 +196,20 @@ class PatientController extends Controller
     }
 
     /**
+     * Permanently remove the specified patient from storage.
+     * 
+     * This action is irreversible and removes the user record completely.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function forceDelete($id)
+    {
+        User::onlyTrashed()->findOrFail($id)->forceDelete();
+        return back()->with('success', 'Patient permanently deleted.');
+    }
+
+    /**
      * Show the form for creating a new patient manually.
      *
      * @return \Illuminate\View\View

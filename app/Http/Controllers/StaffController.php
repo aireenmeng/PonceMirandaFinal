@@ -156,4 +156,21 @@ class StaffController extends Controller
         User::onlyTrashed()->findOrFail($id)->restore();
         return back()->with('success', 'Staff member restored.');
     }
+
+    /**
+     * Permanently remove the specified staff member from storage.
+     * 
+     * This action is irreversible.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function forceDelete($id)
+    {
+        $user = User::onlyTrashed()->findOrFail($id);
+        if ($user->id === Auth::id()) return back()->with('error', 'Cannot delete self.');
+        
+        $user->forceDelete();
+        return back()->with('success', 'Staff member permanently deleted.');
+    }
 }
