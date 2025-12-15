@@ -84,16 +84,14 @@
                 @endif
 
                 {{-- DIAGNOSIS & PRESCRIPTION (If completed) --}}
-                @if($appointment->status == 'completed' && ($appointment->diagnosis || $appointment->prescription))
+                @if($appointment->status == 'completed')
                     <h6 class="font-weight-bold text-success mb-3 pb-2 border-bottom"><i class="fas fa-notes-medical mr-2"></i> Medical Record</h6>
-                    @if($appointment->diagnosis)
-                        <h6 class="font-weight-bold text-dark">Diagnosis:</h6>
-                        <p class="mb-3">{{ $appointment->diagnosis }}</p>
-                    @endif
-                    @if($appointment->prescription)
-                        <h6 class="font-weight-bold text-dark">Prescription/Advice:</h6>
-                        <p class="mb-0">{{ $appointment->prescription }}</p>
-                    @endif
+                    
+                    <h6 class="font-weight-bold text-dark">Diagnosis:</h6>
+                    <p class="mb-3">{{ $appointment->diagnosis ?? 'No diagnosis recorded.' }}</p>
+                    
+                    <h6 class="font-weight-bold text-dark">Prescription/Advice:</h6>
+                    <p class="mb-0">{{ $appointment->prescription ?? 'No prescription/advice recorded.' }}</p>
                 @endif
 
             </div>

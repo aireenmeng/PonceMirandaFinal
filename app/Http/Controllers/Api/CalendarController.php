@@ -26,13 +26,36 @@ class CalendarController extends Controller
         $end = Carbon::parse($request->end);
         $doctorId = $request->doctor_id;
 
+        $events = [];
+
+        // --- ALL DOCTORS VIEW ---
+        if ($doctorId === 'all') {
+            $counts = Appointment::whereBetween('appointment_date', [$start, $end])
+                ->where('status', '!=', 'cancelled')
+                ->where('status', '!=', 'blocked')
+                ->selectRaw('appointment_date, count(*) as count')
+                ->groupBy('appointment_date')
+                ->get();
+
+            foreach ($counts as $row) {
+                $events[] = [
+                    'title' => $row->count . " Patient(s)",
+                    'start' => $row->appointment_date, // Already Y-m-d from database or cast
+                    'backgroundColor' => '#4e73df',
+                    'borderColor' => '#4e73df',
+                    'textColor' => '#ffffff',
+                ];
+            }
+            return response()->json($events);
+        }
+
+        // --- SINGLE DOCTOR VIEW ---
         // Fetch SAVED overrides
         $savedSchedules = Schedule::whereBetween('date', [$start, $end])
             ->where('doctor_id', $doctorId)
             ->get()
             ->keyBy(function($item) { return $item->date->format('Y-m-d'); });
 
-        $events = [];
         $isPatient = Auth::check() && Auth::user()->role === 'patient';
 
         // Iterate through every day in the range to generate Virtual or Real events
@@ -106,6 +129,32 @@ class CalendarController extends Controller
     {
         $date = $request->date;
         $doctorId = $request->doctor_id;
+
+        // --- ALL DOCTORS LIST ---
+        if ($doctorId === 'all') {
+            $appointments = Appointment::with(['patient', 'doctor', 'service'])
+                ->whereDate('appointment_date', $date)
+                ->where('status', '!=', 'cancelled')
+                ->where('status', '!=', 'blocked')
+                ->orderBy('appointment_time')
+                ->get()
+                ->map(function($appt) {
+                    return [
+                        'id' => $appt->id,
+                        'time' => Carbon::parse($appt->appointment_time)->format('h:i A'),
+                        'doctor_name' => $appt->doctor->name,
+                        'patient_name' => $appt->patient->name ?? 'Unknown',
+                        'service_name' => $appt->service->name,
+                        'status' => $appt->status
+                    ];
+                });
+
+            return response()->json([
+                'type' => 'aggregate',
+                'appointments' => $appointments
+            ]);
+        }
+
         $durationMinutes = $request->duration_minutes ?? 30; // Default to 30 min if not provided
         $excludeAppointmentId = $request->exclude_appointment_id ?? null;
 

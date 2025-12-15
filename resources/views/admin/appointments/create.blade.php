@@ -1,6 +1,27 @@
 @extends('layouts.admin')
 
 @section('content')
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .select2-container .select2-selection--single {
+            height: calc(1.5em + 1rem + 2px) !important;
+            padding: 0.5rem 1rem !important;
+            font-size: 1.25rem !important;
+            line-height: 1.5 !important;
+            border-radius: 0.3rem !important;
+            border: 1px solid #d1d3e2 !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: calc(1.5em + 1rem + 2px) !important;
+            right: 10px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 1.5 !important;
+            color: #6e707e !important;
+            padding-left: 0 !important;
+        }
+    </style>
+
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card shadow mb-4">
@@ -166,6 +187,7 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         const appointmentDate = "{{ request('date') }}";
         const jsRequestedDoctorId = "{{ request('doctor_id') }}"; 
@@ -321,6 +343,13 @@
 
         // Initial calls on page load
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Select2 for Patient Search
+            $('#existingPatientSelect').select2({
+                placeholder: "-- Choose Patient --",
+                allowClear: true,
+                width: '100%'
+            });
+
             if (doctorSelect.value) { 
                 updateDuration(); 
             } else {

@@ -21,6 +21,7 @@
                     <h6 class="m-0 font-weight-bold text-primary">Monthly Overview</h6>
                     
                     <select id="doctorFilter" class="custom-select custom-select-sm shadow-sm border-0 bg-light text-dark font-weight-bold" style="width: 250px;">
+                        <option value="all">All Doctors</option>
                         <option value="">-- Select Doctor --</option>
                         @foreach($doctors as $doc)
                             <option value="{{ $doc->id }}">Dr. {{ $doc->name }}</option>
@@ -137,7 +138,7 @@
     <script>
     var calendar;
     var currentSelectedDate = null;
-    var currentDoctorId = null;
+    var currentDoctorId = 'all'; 
     var currentDayStatus = 'closed'; 
     var isAdjustMode = false;
 
@@ -161,19 +162,19 @@
             height: 500,
             validRange: { start: new Date().toISOString().split('T')[0] },
             events: function(info, successCallback, failureCallback) {
-                var doctorId = doctorSelect.value;
-                if(!doctorId) { successCallback([]); return; }
+                var doctorId = doctorSelect.value || 'all'; // Default to 'all'
                 fetch("{{ route('api.calendar') }}?doctor_id=" + doctorId + "&start=" + info.startStr + "&end=" + info.endStr)
                     .then(r => r.json()).then(data => successCallback(data));
             },
             dateClick: function(info) {
-                if(!doctorSelect.value) { alert("Please select a doctor first."); return; }
+                // Allow click for 'all' or specific doctor
+                // if(!doctorSelect.value) { alert("Please select a doctor first."); return; } // Removed restriction
                 
                 document.querySelectorAll('.fc-daygrid-day').forEach(el => el.style.backgroundColor = '');
                 info.dayEl.style.backgroundColor = '#d1e3ff'; 
                 
                 currentSelectedDate = info.dateStr;
-                currentDoctorId = doctorSelect.value;
+                currentDoctorId = doctorSelect.value || 'all';
                 
                 document.getElementById('selectedDateLabel').innerText = new Date(info.dateStr).toDateString();
                 isAdjustMode = false;
@@ -195,6 +196,7 @@
         }
 
         doctorSelect.addEventListener('change', function() {
+            currentDoctorId = this.value || 'all';
             calendar.refetchEvents();
             document.getElementById('day-details-container').innerHTML = `
                 <div class="text-center mt-5 text-muted p-4">
@@ -214,6 +216,13 @@
         fetch(`{{ route('api.day_details') }}?date=${currentSelectedDate}&doctor_id=${currentDoctorId}`)
             .then(r => r.json())
             .then(data => {
+                // HANDLE ALL DOCTORS VIEW
+                if (data.type === 'aggregate') {
+                    btn.style.display = 'none'; // No actions allowed
+                    renderPatientList(data.appointments);
+                    return;
+                }
+
                 currentDayStatus = data.status;
 
                 if (data.status === 'closed') {
@@ -239,6 +248,39 @@
                     renderSlots(data.slots);
                 }
             });
+    }
+
+    function renderPatientList(appointments) {
+        const container = document.getElementById('day-details-container');
+        if(!appointments || appointments.length === 0) {
+            container.innerHTML = `
+                <div class="text-center mt-5 text-muted p-4">
+                    <i class="fas fa-calendar-times fa-3x mb-3 text-gray-200"></i>
+                    <p>No appointments for this date.</p>
+                </div>`;
+            return;
+        }
+
+        let html = '<div class="list-group list-group-flush">';
+        appointments.forEach(appt => {
+            html += `
+                <div class="list-group-item px-0 bg-transparent border-bottom">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="font-weight-bold text-primary">${appt.time}</span>
+                        <span class="badge badge-secondary text-uppercase" style="font-size:0.7rem">${appt.status}</span>
+                    </div>
+                    <div class="font-weight-bold text-dark mb-1">${appt.patient_name}</div>
+                    <div class="small text-muted mb-2">
+                        <i class="fas fa-user-md mr-1"></i> ${appt.doctor_name} <br>
+                        <i class="fas fa-tooth mr-1"></i> ${appt.service_name}
+                    </div>
+                    <div class="text-right">
+                         <a href="/admin/appointments/${appt.id}?from=calendar&doctor_id=all&date=${currentSelectedDate}" class="btn btn-sm btn-primary shadow-sm py-1 px-3" style="font-size:0.75rem">View Details</a>
+                    </div>
+                </div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
     }
 
     function renderSlots(slots) {
@@ -310,6 +352,8 @@
     }
 
     function handleSmartAction() {
+        if (currentDoctorId === 'all') return; // Disable for aggregate view
+
         if (currentDayStatus === 'closed') {
             document.getElementById('initDoctorId').value = currentDoctorId;
             document.getElementById('initDate').value = currentSelectedDate;
