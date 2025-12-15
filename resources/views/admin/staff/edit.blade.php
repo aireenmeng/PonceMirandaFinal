@@ -2,13 +2,13 @@
 
 @section('content')
 <div class="container-fluid">
-    <h1 class="h3 mb-4 text-gray-800">Edit Staff Member</h1>
+    <h1 class="h3 mb-4 text-gray-800">Edit Doctor Details</h1>
 
-    <div class="row justify-content-center"> {{-- Centering row --}}
-        <div class="col-lg-8"> {{-- Limiting width --}}
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Staff Details</h6>
+                    <h6 class="m-0 font-weight-bold text-primary">Doctor Details</h6>
                 </div>
                 <div class="card-body">
                     <form action="{{ route('admin.staff.update', $staff->id) }}" method="POST">
@@ -36,7 +36,6 @@
                         <div class="form-group">
                             <label for="role">Role</label>
                             <select name="role" id="role" class="form-control @error('role') is-invalid @enderror" required>
-                                <option value="admin" {{ old('role', $staff->role) == 'admin' ? 'selected' : '' }}>Admin</option>
                                 <option value="doctor" {{ old('role', $staff->role) == 'doctor' ? 'selected' : '' }}>Doctor</option>
                             </select>
                             @error('role')<div class="invalid-feedback">{{ $message }}</div>@enderror

@@ -12,19 +12,19 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rule;
 
 /**
- * Manages clinic staff accounts (Doctors and Admins).
+ * Manages doctor accounts within the clinic system.
  * 
- * Handles the invitation flow, where staff are created with a temporary state
- * and invited to set their credentials. Also handles updates and archiving.
+ * This controller handles the lifecycle of doctor accounts, including invitation,
+ * creation, updating details, and soft/hard deletion.
  */
 class StaffController extends Controller
 {
     /**
-     * Display a list of staff members with filtering options.
+     * Display a list of doctor accounts with filtering options.
      *
-     * - active: Fully registered staff with verified emails.
-     * - pending: Invited staff who have not yet set their password/verified email.
-     * - archived: Soft-deleted staff accounts.
+     * - active: Doctors with verified email addresses.
+     * - pending: Doctors who have been invited but not yet set their password/verified email.
+     * - archived: Soft-deleted doctor accounts.
      * 
      * @param Request $request
      * @return \Illuminate\View\View
@@ -33,13 +33,13 @@ class StaffController extends Controller
     {
         $view = $request->get('view', 'active'); 
 
-        // Base query for staff roles only
-        $query = User::whereIn('role', ['admin', 'doctor']);
+        // Base query for doctor roles only
+        $query = User::where('role', 'doctor');
 
         if ($view === 'pending') {
             $staff = $query->whereNull('email_verified_at')->orderBy('created_at', 'desc')->paginate(10);
         } elseif ($view === 'archived') {
-            $staff = User::onlyTrashed()->whereIn('role', ['admin', 'doctor'])->paginate(10);
+            $staff = User::onlyTrashed()->where('role', 'doctor')->paginate(10);
         } else {
             $staff = $query->whereNotNull('email_verified_at')->orderBy('created_at', 'desc')->paginate(10);
         }
@@ -48,7 +48,7 @@ class StaffController extends Controller
     }
 
     /**
-     * Show the invitation form for new staff.
+     * Show the invitation form for a new doctor.
      *
      * @return \Illuminate\View\View
      */
@@ -58,11 +58,11 @@ class StaffController extends Controller
     }
 
     /**
-     * Invite a new staff member.
+     * Invite a new doctor.
      * 
-     * Creates a user account with a random, temporary password. Then generates
-     * a secure password reset token and sends it via email (mimicking an "invitation").
-     * This ensures the admin never knows the staff member's password.
+     * Creates a user account with a random, temporary password. A password reset
+     * token is generated and sent via email, allowing the invited doctor to set
+     * their own secure credentials.
      *
      * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
@@ -72,11 +72,10 @@ class StaffController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'role' => 'required|in:admin,doctor',
+            'role' => 'required|in:doctor', // Restrict to 'doctor' role
             'phone' => 'nullable|numeric|digits:11'
         ]);
 
-        // Create the user with a placeholder password
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -85,28 +84,27 @@ class StaffController extends Controller
             'password' => Hash::make(Str::random(16)),
         ]);
 
-        // Generate a password reset link and notify the user
         $token = Password::createToken($user);
         $user->sendPasswordResetNotification($token);
 
         return redirect()->route('admin.staff.index')
-            ->with('success', "Invitation sent to new {$request->role}.");
+            ->with('success', "Invitation sent to new doctor.");
     }
 
     /**
-     * Show the form for editing a staff member's details.
+     * Show the form for editing a doctor's details.
      *
      * @param int $id
      * @return \Illuminate\View\View
      */
     public function edit($id)
     {
-        $staff = User::whereIn('role', ['admin', 'doctor'])->findOrFail($id);
+        $staff = User::where('role', 'doctor')->findOrFail($id);
         return view('admin.staff.edit', compact('staff'));
     }
 
     /**
-     * Update a staff member's profile information.
+     * Update a doctor's profile information.
      *
      * @param Request $request
      * @param int $id
@@ -114,23 +112,23 @@ class StaffController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $staff = User::whereIn('role', ['admin', 'doctor'])->findOrFail($id);
+        $staff = User::where('role', 'doctor')->findOrFail($id);
         
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('users')->ignore($staff->id)],
-            'role' => 'required|in:admin,doctor',
+            'role' => 'required|in:doctor', // Restrict to 'doctor' role
             'phone' => 'nullable|numeric|digits:11', 
         ]);
 
         $staff->update($request->all());
 
         return redirect()->route('admin.staff.index')
-            ->with('success', "Staff member '{$staff->name}' updated successfully.");
+            ->with('success', "Doctor '{$staff->name}' updated successfully.");
     }
 
     /**
-     * Archive (soft delete) a staff member.
+     * Archive (soft delete) a doctor's account.
      * 
      * Prevents self-deletion to avoid admin lockout.
      *
@@ -140,25 +138,25 @@ class StaffController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
-        if ($user->id === Auth::id()) return back()->with('error', 'Cannot delete self.');
+        if ($user->id === Auth::id()) return back()->with('error', 'Cannot deactivate your own account.');
         $user->delete();
-        return back()->with('success', 'Staff member archived.');
+        return back()->with('success', 'Doctor account archived.');
     }
 
     /**
-     * Restore an archived staff member.
+     * Restore an archived doctor's account.
      *
      * @param int $id
      * @return \Illuminate\Http\RedirectResponse
      */
     public function restore($id)
     {
-        User::onlyTrashed()->findOrFail($id)->restore();
-        return back()->with('success', 'Staff member restored.');
+        User::onlyTrashed()->where('role', 'doctor')->findOrFail($id)->restore();
+        return back()->with('success', 'Doctor account restored.');
     }
 
     /**
-     * Permanently remove the specified staff member from storage.
+     * Permanently remove the specified doctor's account from storage.
      * 
      * This action is irreversible.
      *
@@ -167,10 +165,10 @@ class StaffController extends Controller
      */
     public function forceDelete($id)
     {
-        $user = User::onlyTrashed()->findOrFail($id);
-        if ($user->id === Auth::id()) return back()->with('error', 'Cannot delete self.');
+        $user = User::onlyTrashed()->where('role', 'doctor')->findOrFail($id);
+        if ($user->id === Auth::id()) return back()->with('error', 'Cannot delete your own account permanently.');
         
         $user->forceDelete();
-        return back()->with('success', 'Staff member permanently deleted.');
+        return back()->with('success', 'Doctor account permanently deleted.');
     }
 }
