@@ -87,6 +87,7 @@ class PatientBookingController extends Controller
             'appointment_date' => $request->appointment_date,
             'appointment_time' => $request->appointment_time,
             'duration_minutes' => $service->duration_minutes,
+            'price' => $service->price, // Added price from service
             'status' => 'pending' // Online bookings require staff confirmation
         ]);
 

@@ -53,14 +53,21 @@ class PatientHistoryController extends Controller
     {
         $appt = Appointment::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
         
-        if ($appt->status != 'pending') {
-            return back()->with('error', 'Only pending appointments can be cancelled.');
+        
+        if (!in_array($appt->status, ['pending', 'confirmed'])) {
+            return back()->with('error', 'Only pending or confirmed appointments can be cancelled by the patient.');
         }
         
+        $cancellationReason = 'Patient requested cancellation';
+        if ($appt->status === 'confirmed') {
+            $cancellationReason = 'Patient cancelled a confirmed appointment';
+        }
+
         $appt->update([
             'status' => 'cancelled', 
-            'cancellation_reason' => 'Patient requested cancellation',
-            'cancelled_by' => Auth::id()
+            'cancellation_reason' => $cancellationReason,
+            'cancelled_by' => Auth::id(),
+            'cancelled_at' => now()
         ]);
         
         return back()->with('success', 'Appointment cancelled.');

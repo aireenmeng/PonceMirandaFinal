@@ -84,7 +84,10 @@
                                         <th>Patient</th>
                                         <th>Service</th>
                                         <th>Doctor</th>
+                                        <th>Diagnosis</th>
+                                        <th>Prescription</th>
                                         <th class="text-right">Amount</th>
+
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -94,6 +97,9 @@
                                         <td>{{ $appt->patient->name ?? 'N/A (Patient Deleted)' }}</td>
                                         <td>{{ $appt->service->name }}</td>
                                         <td>Dr. {{ $appt->doctor->name }}</td>
+                                        <td>{{ $appt->diagnosis  }}</td>
+                                        <td>{{ $appt->prescription }}</td>
+
                                         <td class="text-right font-weight-bold">₱{{ number_format($appt->price, 2) }}</td>
                                     </tr>
                                     @empty

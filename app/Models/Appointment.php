@@ -22,7 +22,8 @@ class Appointment extends Model
         'prescription', // Added
         'cancellation_reason',
         'cancelled_by',
-        'cancelled_at'
+        'cancelled_at',
+        'price' // Added to allow mass assignment
     ];
 
     protected $casts = [
