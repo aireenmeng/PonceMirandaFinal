@@ -288,7 +288,7 @@
         let html = '';
 
         slots.forEach(slot => {
-            // 1. LUNCH
+     
             if (slot.type === 'lunch') {
                 html += `
                 <div class="slot-row status-lunch">
@@ -299,12 +299,12 @@
             }
 
             if (isAdjustMode) {
-                // 2. ADJUST MODE
+        
                 if (slot.type === 'booked') {
                         html += `<div class="slot-row bg-light"><div class="slot-time text-muted">${slot.time_label}</div><div class="slot-status text-muted">BOOKED</div><span class="badge badge-secondary"><i class="fas fa-lock"></i></span></div>`;
                 } else {
                     let isBlocked = (slot.type === 'blocked');
-                    // CHANGED: Single button toggle instead of radio group
+               
                     html += `
                         <div class="slot-row ${isBlocked ? 'status-blocked' : 'status-open'}">
                             <div class="slot-time">${slot.time_label}</div>
@@ -317,9 +317,9 @@
                         </div>`;
                 }
             } else {
-                // 3. VIEW MODE (Standard)
+              
                 if (slot.type === 'booked') {
-                    // LINK FIX: Now uses slot.appt_id correctly
+                
                     html += `
                     <div class="slot-row status-booked">
                         <div class="slot-time">${slot.time_label}</div>
@@ -334,8 +334,7 @@
                         <button class="btn btn-sm btn-outline-secondary shadow-sm mr-2" onclick="updateBlockStatus('${slot.raw_time}', 'available')">Unblock</button>
                     </div>`;
                 } else {
-                    // LINK FIX: Now uses slot.raw_date correctly
-                    // DESIGN FIX: Text removed, only Icon kept
+           
                     html += `
                     <div class="slot-row status-open">
                         <div class="slot-time">${slot.time_label}</div>
@@ -352,7 +351,7 @@
     }
 
     function handleSmartAction() {
-        if (currentDoctorId === 'all') return; // Disable for aggregate view
+        if (currentDoctorId === 'all') return;
 
         if (currentDayStatus === 'closed') {
             document.getElementById('initDoctorId').value = currentDoctorId;
@@ -383,7 +382,7 @@
     }
 
     function updateBlockStatus(time, status) {
-        // Show loading or disable buttons could be added here
+  
         fetch("{{ route('admin.appointments.block') }}", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
@@ -392,8 +391,8 @@
         .then(response => response.json())
         .then(data => {
             if(data.success) {
-                fetchDayDetails(); // Refresh the list to show new status
-                calendar.refetchEvents(); // Refresh calendar to show day color changes
+                fetchDayDetails(); 
+                calendar.refetchEvents(); 
             } else {
                 alert("Failed to update slot.");
             }

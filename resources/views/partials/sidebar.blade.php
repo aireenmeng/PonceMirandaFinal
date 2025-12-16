@@ -14,7 +14,9 @@
     {{-- 1. ADMIN MENU (Role: 'admin') --}}
     {{-- ========================================================= --}}
     @if(auth()->user()->role === 'admin')
-        
+
+        <div class="sidebar-heading">Overview</div>
+
         <li class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.dashboard') }}">
                 <i class="fas fa-fw fa-tachometer-alt"></i><span>Admin Dashboard</span>
@@ -26,23 +28,23 @@
 
         <li class="nav-item {{ request()->routeIs('admin.appointments.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.appointments.index', ['date' => now()->format('Y-m-d')]) }}">
-                <i class="fas fa-calendar-check"></i><span>Appointments</span>
-            </a>
-        </li>
-        <li class="nav-item {{ request()->routeIs('admin.services.*') ? 'active' : '' }}">
-            <a class="nav-link" href="{{ route('admin.services.index') }}">
-                <i class="fas fa-clipboard-list"></i><span>Manage Services</span>
+                <i class="fas fa-calendar-check"></i><span>Appointment</span>
             </a>
         </li>
         <li class="nav-item {{ request()->routeIs('admin.schedules.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.schedules.index') }}">
-                <i class="fas fa-clock"></i><span>Doctor Schedules</span>
+                <i class="fas fa-clock"></i><span>Schedule</span>
             </a>
         </li>
         
         <hr class="sidebar-divider">
         <div class="sidebar-heading">Management</div>
         
+        <li class="nav-item {{ request()->routeIs('admin.services.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('admin.services.index') }}">
+                <i class="fas fa-clipboard-list"></i><span>Services</span>
+            </a>
+        </li>
         <li class="nav-item {{ request()->routeIs('admin.patients.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.patients.index') }}">
                 <i class="fas fa-users"></i><span>Patients</span>

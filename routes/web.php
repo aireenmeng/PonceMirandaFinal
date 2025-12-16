@@ -175,6 +175,7 @@ Route::middleware(['auth', 'role:admin', 'verified'])->prefix('admin')->name('ad
     Route::put('/patients/{id}', [PatientController::class, 'update'])->name('patients.update');
     Route::delete('/patients/{id}', [PatientController::class, 'destroy'])->name('patients.destroy');
     Route::post('/patients/{id}/restore', [PatientController::class, 'restore'])->name('patients.restore');
+    Route::delete('/patients/{id}/force', [PatientController::class, 'forceDelete'])->name('patients.forceDelete');
     
     // Staff Management: Manage clinic staff (Doctors, Admins)
     Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');

@@ -96,6 +96,17 @@ class DoctorScheduleController extends Controller
         if ($isDayOff) {
             $start = '00:00:00';
             $end   = '00:00:00';
+
+            // Cancel existing appointments for this day
+            Appointment::where('doctor_id', Auth::id())
+                ->whereDate('appointment_date', $request->date)
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->update([
+                    'status' => 'cancelled',
+                    'cancellation_reason' => 'Doctor marked day off',
+                    'cancelled_by' => Auth::id(),
+                    'cancelled_at' => now()
+                ]);
         } else {
             $start = $request->start_time ?: '09:00:00';
             $end   = $request->end_time   ?: '17:00:00';

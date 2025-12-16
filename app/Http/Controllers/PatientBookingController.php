@@ -64,7 +64,7 @@ class PatientBookingController extends Controller
                 'required',
                 'date',
                 'after_or_equal:today',
-                'before_or_equal:' . \Carbon\Carbon::now()->addMonths(2)->endOfMonth()->toDateString(),
+                'before_or_equal:' . \Carbon\Carbon::now()->addMonths(1)->endOfMonth()->toDateString(),
             ],
             'appointment_time' => [
                 'required',

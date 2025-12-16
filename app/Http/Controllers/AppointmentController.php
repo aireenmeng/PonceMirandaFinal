@@ -154,7 +154,7 @@ class AppointmentController extends Controller
         $rules = [
             'doctor_id'        => 'required|exists:users,id',
             'service_id'       => 'required|exists:services,id',
-            'appointment_date' => 'required|date|after_or_equal:today',
+            'appointment_date' => 'required|date|after_or_equal:today|before_or_equal:' . \Carbon\Carbon::now()->addMonths(1)->endOfMonth()->toDateString(),
             'appointment_time' => 'required',
             'duration_minutes' => 'required|integer|min:30',
             'patient_type'     => 'required|in:existing,new', 
@@ -339,7 +339,7 @@ class AppointmentController extends Controller
                 'required',
                 'date',
                 'after_or_equal:today', 
-                'before_or_equal:' . \Carbon\Carbon::now()->addMonths(2)->endOfMonth()->toDateString(), 
+                'before_or_equal:' . \Carbon\Carbon::now()->addMonths(1)->endOfMonth()->toDateString(), 
             ],
             'appointment_time' => [
                 'required',

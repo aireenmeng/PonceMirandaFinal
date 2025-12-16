@@ -6,7 +6,7 @@
     {{-- Page header with title and a button to generate reports --}}
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         {{-- Page title for the Clinic Dashboard --}}
-        <h1 class="h3 mb-0 text-gray-800">Clinic Dashboard</h1>
+        <h1 class="h3 mb-0 text-gray-800">Overview</h1>
         
         {{-- Button to navigate to the report generation page --}}
         <a href="{{ route('admin.reports.index') }}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
