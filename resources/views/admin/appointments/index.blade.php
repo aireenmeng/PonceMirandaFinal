@@ -257,38 +257,57 @@
                                     @endif
                                 </td>
                             @else
-                                {{-- Standard actions (View, Edit, Confirm, Complete) --}}
+                                {{-- Standard actions --}}
                                 <td class="text-right pr-4">
-                                    {{-- Determines if the appointment is in the future --}}
-                                    @php
-                                        $isFutureAppointment = $appt->appointment_date->isFuture();
-                                    @endphp
+                                    {{-- View is always available --}}
+                                    <a href="{{ route('admin.appointments.show', array_merge(['id' => $appt->id], request()->query())) }}" class="btn btn-primary btn-sm rounded-circle shadow-sm mr-1" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
 
-                                    @if($isFutureAppointment)
-                                        {{-- Actions for future appointments: View and Edit --}}
-                                        <a href="{{ route('admin.appointments.show', array_merge(['id' => $appt->id], request()->query())) }}" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-eye"></i> View</a>
-                                        <a href="{{ route('admin.appointments.edit', $appt->id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </a>
-                                    @else
-                                        {{-- Actions for past or current day appointments: View, Confirm, Complete --}}
-                                        <a href="{{ route('admin.appointments.show', array_merge(['id' => $appt->id], request()->query())) }}" class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-eye"></i> View</a>
+                                    @if($appt->status == 'pending')
+                                        {{-- Confirm: Available for pending --}}
+                                        <form action="{{ route('admin.appointments.confirm', $appt->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            @foreach(request()->query() as $key => $value) <input type="hidden" name="{{ $key }}" value="{{ $value }}"> @endforeach
+                                            <button class="btn btn-success btn-sm rounded-circle shadow-sm mr-1" title="Confirm">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+
+                                        {{-- Cancel: Available for pending (No JS Confirm) --}}
+                                        <form action="{{ route('admin.appointments.cancel', $appt->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            {{-- Default reason for quick cancellation --}}
+                                            <input type="hidden" name="cancellation_reason" value="Cancelled via Admin Panel">
+                                            @foreach(request()->query() as $key => $value) <input type="hidden" name="{{ $key }}" value="{{ $value }}"> @endforeach
+                                            <button class="btn btn-danger btn-sm rounded-circle shadow-sm" title="Cancel/Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+
+                                    @elseif($appt->status == 'confirmed')
                                         
-                                        {{-- Confirm button for pending appointments --}}
-                                        @if($appt->status == 'pending')
-                                            <form action="{{ route('admin.appointments.confirm', $appt->id) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                @foreach(request()->query() as $key => $value) <input type="hidden" name="{{ $key }}" value="{{ $value }}"> @endforeach
-                                                <button class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-check"></i> Confirm</button>
-                                            </form>
-                                        {{-- Complete button for confirmed appointments --}}
-                                        @elseif($appt->status == 'confirmed')
+                                        {{-- Complete: Only for today or past --}}
+                                        @if(!$appt->appointment_date->isFuture())
                                             <form action="{{ route('admin.appointments.complete', $appt->id) }}" method="POST" class="d-inline">
                                                 @csrf
                                                 @foreach(request()->query() as $key => $value) <input type="hidden" name="{{ $key }}" value="{{ $value }}"> @endforeach
-                                                <button class="btn btn-primary btn-sm rounded-pill px-3"><i class="fas fa-check-double"></i> Complete</button>
+                                                <button class="btn btn-success btn-sm rounded-circle shadow-sm mr-1" title="Complete">
+                                                    <i class="fas fa-check-double"></i>
+                                                </button>
                                             </form>
                                         @endif
+
+                                        {{-- Cancel: Available for confirmed too --}}
+                                        <form action="{{ route('admin.appointments.cancel', $appt->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="cancellation_reason" value="Cancelled via Admin Panel">
+                                            @foreach(request()->query() as $key => $value) <input type="hidden" name="{{ $key }}" value="{{ $value }}"> @endforeach
+                                            <button class="btn btn-danger btn-sm rounded-circle shadow-sm" title="Cancel">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        </form>
+
                                     @endif
                                 </td>
                             @endif
