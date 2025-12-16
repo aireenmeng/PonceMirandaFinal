@@ -28,7 +28,7 @@ class AppointmentService
         $durationMinutes = (int) $appointmentData['duration_minutes'];
         $requestedEndTime = $requestedStartTime->copy()->addMinutes($durationMinutes);
 
-        // --- 1. Check Doctor's Schedule ---
+        // --- Check Doctor's Schedule ---
         $schedule = Schedule::where('doctor_id', $doctorId)
             ->where('date', $requestedDate->toDateString())
             ->first();
@@ -61,7 +61,7 @@ class AppointmentService
             $errors[] = 'Appointment is outside doctor\'s working hours (' . $scheduleStartTime->format('h:i A') . ' - ' . $scheduleEndTime->format('h:i A') . ').';
         }
 
-        // --- 2. Check Max Appointments ---
+        // --- Check Max Appointments ---
         // Exclude the appointment being updated from the count
         $query = Appointment::where('doctor_id', $doctorId)
             ->where('appointment_date', $requestedDate->toDateString())
@@ -76,7 +76,7 @@ class AppointmentService
             $errors[] = 'Doctor\'s schedule is full for this day.';
         }
 
-        // --- 3. Check for Overlapping Appointments (Doctor) ---
+        // --- Check for Overlapping Appointments (Doctor) ---
         $overlapQuery = Appointment::where('doctor_id', $doctorId)
             ->where('appointment_date', $requestedDate->toDateString())
             ->where('status', '!=', 'cancelled')
@@ -96,7 +96,7 @@ class AppointmentService
             $errors[] = 'Appointment time overlaps with an existing appointment for this doctor.';
         }
 
-        // --- 4. Check for Overlapping Appointments (Patient) ---
+        // --- Check for Overlapping Appointments (Patient) ---
         if (isset($appointmentData['user_id']) && $appointmentData['user_id']) {
             $patientOverlapQuery = Appointment::where('user_id', $appointmentData['user_id'])
                 ->where('appointment_date', $requestedDate->toDateString())
@@ -112,8 +112,6 @@ class AppointmentService
                 $patientOverlapQuery->where('id', '!=', $excludeAppointmentId);
             }
             
-            // The patient might be booking with a DIFFERENT doctor, so we don't filter by doctor_id here.
-            // We just want to know if the PATIENT is busy.
             
             $patientOverlap = $patientOverlapQuery->count();
 

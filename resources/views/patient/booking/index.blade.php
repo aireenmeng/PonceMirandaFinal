@@ -14,7 +14,7 @@
         <input type="hidden" name="doctor_id" id="input_doctor_id" required>
         <input type="hidden" name="appointment_date" id="input_date" required>
         <input type="hidden" name="appointment_time" id="input_time" required>
-        {{-- IMPORTANT: We pass the calculated minutes to the backend --}}
+
         <input type="hidden" name="duration_minutes" id="input_duration" required>
 
         <div class="row">

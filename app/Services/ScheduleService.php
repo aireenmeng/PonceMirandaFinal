@@ -112,13 +112,13 @@ class ScheduleService
             $slotDetails = 'Available';
             $apptId = null;
 
-            // CHECK 1: LUNCH
+            // CHECK LUNCH
             if ($slotStart->betweenIncluded($lunchStart, $lunchEnd->copy()->subMinute())) {
                 $slotStatus = 'lunch';
                 $slotDetails = 'Lunch Break';
             }
             
-            // CHECK 2: EXISTING BOOKINGS
+            // CHECK EXISTING BOOKINGS
             foreach ($bookings as $appt) {
                 $apptStart = Carbon::parse($date . ' ' . Carbon::parse($appt->appointment_time)->format('H:i:s'));
                 $apptEnd = $apptStart->copy()->addMinutes((int)$appt->duration_minutes); // Explicitly cast to int
@@ -137,7 +137,7 @@ class ScheduleService
                 }
             }
 
-            // CHECK 3: CAPACITY (Only if slot is still available after other checks)
+            // CHECK CAPACITY (Only if slot is still available after other checks)
             if ($slotStatus === 'available' && $capacityReached) {
                 $slotStatus = 'full';
                 $slotDetails = 'Fully Booked';

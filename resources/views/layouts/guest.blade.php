@@ -6,7 +6,6 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'Ponce Miranda') }}</title>
     
-    {{-- Google Font: Inter --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -26,7 +25,6 @@
 </head>
 <body class="bg-light">
 
-    {{-- 1. PUBLIC NAVBAR --}}
     <nav class="navbar navbar-expand-lg navbar-light guest-nav sticky-top">
         <div class="container">
             <a class="navbar-brand font-weight-bold text-primary d-flex align-items-center" href="{{ route('public.home') }}">
@@ -51,14 +49,11 @@
         </div>
     </nav>
 
-    {{-- 2. HYBRID CONTENT AREA --}}
-    {{-- This checks: Is there a $slot? If yes, echo it. If no, check for @section('content') --}}
     <main>
         {{ $slot ?? '' }} 
         @yield('content')
     </main>
 
-    {{-- 3. MODERN FOOTER --}}
     <footer class="bg-dark text-white pt-5 pb-4 mt-5">
         <div class="container">
             <div class="row">
