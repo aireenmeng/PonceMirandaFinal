@@ -73,7 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 | Patient Routes
 |--------------------------------------------------------------------------
 |
-| Routes specifically for users with the 'patient' role.
+| Routes specifically for users with the patient role.
 | Covers dashboard access, appointment booking, and history.
 */
 Route::middleware(['auth', 'role:patient', 'verified'])->group(function () {
@@ -175,7 +175,6 @@ Route::middleware(['auth', 'role:admin', 'verified'])->prefix('admin')->name('ad
     Route::put('/patients/{id}', [PatientController::class, 'update'])->name('patients.update');
     Route::delete('/patients/{id}', [PatientController::class, 'destroy'])->name('patients.destroy');
     Route::post('/patients/{id}/restore', [PatientController::class, 'restore'])->name('patients.restore');
-    Route::delete('/patients/{id}/force', [PatientController::class, 'forceDelete'])->name('patients.forceDelete');
     
     // Staff Management: Manage clinic staff (Doctors, Admins)
     Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
@@ -185,7 +184,6 @@ Route::middleware(['auth', 'role:admin', 'verified'])->prefix('admin')->name('ad
     Route::put('/staff/{id}', [StaffController::class, 'update'])->name('staff.update');
     Route::delete('/staff/{id}', [StaffController::class, 'destroy'])->name('staff.destroy');
     Route::post('/staff/{id}/restore', [StaffController::class, 'restore'])->name('staff.restore');
-    Route::delete('/staff/{id}/force', [StaffController::class, 'forceDelete'])->name('staff.forceDelete');
 
     // Reports: View clinic reports and analytics
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');

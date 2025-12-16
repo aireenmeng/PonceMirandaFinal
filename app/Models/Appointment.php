@@ -12,24 +12,24 @@ class Appointment extends Model
 
     protected $fillable = [
         'user_id',
-        'doctor_id', // <--- Added
+        'doctor_id', 
         'service_id',
         'appointment_date',
         'appointment_time',
         'duration_minutes',
+        'price',
         'status',
-        'diagnosis', // Added
-        'prescription', // Added
+        'diagnosis', 
+        'prescription', 
         'cancellation_reason',
         'cancelled_by',
-        'cancelled_at',
-        'price' // Added to allow mass assignment
+        'cancelled_at'
     ];
 
     protected $casts = [
         'appointment_date' => 'date',
         'appointment_time' => 'datetime',
-        'duration_minutes' => 'integer', // Added this line
+        'duration_minutes' => 'integer', 
         'cancelled_at' => 'datetime',
     ];
 

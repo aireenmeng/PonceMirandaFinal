@@ -51,7 +51,25 @@ class AppointmentController extends Controller
         $sort = $request->get('sort', 'appointment_date'); 
         $direction = $request->get('direction', 'asc');
 
-        $allowedSorts = ['appointment_date', 'appointment_time', 'created_at', 'id'];
+        // Handle consolidated Sorting Filter (Dropdown)
+        if ($request->has('sort_by')) {
+            switch ($request->sort_by) {
+                case 'date_desc':
+                    $sort = 'appointment_date'; $direction = 'desc'; break;
+                case 'date_asc':
+                    $sort = 'appointment_date'; $direction = 'asc'; break;
+                case 'created_desc':
+                    $sort = 'created_at'; $direction = 'desc'; break;
+                case 'cancelled_desc':
+                    $sort = 'cancelled_at'; $direction = 'desc'; break;
+            }
+        } elseif ($status === 'cancelled' && !$request->has('sort')) {
+            // Default sort for 'cancelled' tab: Most recently cancelled first
+            $sort = 'cancelled_at';
+            $direction = 'desc';
+        }
+
+        $allowedSorts = ['appointment_date', 'appointment_time', 'created_at', 'id', 'cancelled_at'];
         if (!in_array($sort, $allowedSorts)) {
             $sort = 'appointment_date';
         }
@@ -156,16 +174,22 @@ class AppointmentController extends Controller
         // Execute the booking process within a transaction to handle race conditions
         return DB::transaction(function () use ($request) {
             
-            // Acquire a lock to check for overlapping appointments at the exact same time
-            $conflicts = Appointment::where('doctor_id', $request->doctor_id)
-                ->where('appointment_date', $request->appointment_date)
-                ->where('appointment_time', $request->appointment_time)
-                ->whereIn('status', ['confirmed', 'pending'])
-                ->lockForUpdate()
-                ->count();
+            // Check for scheduling conflicts using the service
+            $checkData = [
+                'doctor_id' => $request->doctor_id,
+                'appointment_date' => $request->appointment_date,
+                'appointment_time' => $request->appointment_time,
+                'duration_minutes' => $request->duration_minutes,
+            ];
 
-            if ($conflicts > 0) {
-                 return redirect()->back()->withInput()->with('error', 'Slot was just taken! Please choose another.');
+            if ($request->patient_type === 'existing') {
+                $checkData['user_id'] = $request->user_id;
+            }
+
+            $conflicts = $this->appointmentService->checkConflicts($checkData);
+
+            if (!empty($conflicts)) {
+                 return redirect()->back()->withInput()->withErrors($conflicts);
             }
 
             $userId = $request->user_id;
@@ -361,6 +385,10 @@ class AppointmentController extends Controller
 
         if ($appointment->status !== 'cancelled') {
             return redirect()->route('admin.appointments.index', $request->all())->with('error', 'Only cancelled appointments can be restored.');
+        }
+
+        if ($appointment->appointment_date->lt(Carbon::today())) {
+            return redirect()->route('admin.appointments.index', $request->all())->with('error', 'Cannot restore a past appointment.');
         }
 
         $appointment->update([

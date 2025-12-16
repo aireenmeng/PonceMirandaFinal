@@ -68,11 +68,50 @@ class PatientBookingController extends Controller
             ],
             'appointment_time' => [
                 'required',
-                // Custom validation: If booking for today, time must be in the future
+                // Check 1: Future time for today
                 function ($attribute, $value, $fail) use ($request) {
                     $appointmentDateTime = \Carbon\Carbon::parse($request->appointment_date . ' ' . $value);
                     if ($appointmentDateTime->isToday() && $appointmentDateTime->lt(\Carbon\Carbon::now())) {
                         $fail('The ' . $attribute . ' must be a future time for today\'s appointments.');
+                    }
+                },
+                // Check 2: No Overlapping Appointments for the Patient
+                function ($attribute, $value, $fail) use ($request) {
+                    $user = Auth::user();
+                    $service = Service::find($request->service_id);
+                    $duration = $service ? ($service->duration_minutes ?? 60) : 60;
+
+                    // Normalize requested date and time
+                    // We combine the date from the request and the time from the input ($value)
+                    $reqStart = \Carbon\Carbon::parse($request->appointment_date . ' ' . $value);
+                    $reqEnd = $reqStart->copy()->addMinutes($duration);
+
+                    // Find potential conflicts on the same day
+                    $conflicts = Appointment::where('user_id', $user->id)
+                        ->whereDate('appointment_date', $request->appointment_date)
+                        ->whereIn('status', ['confirmed', 'pending'])
+                        ->get();
+
+                    foreach ($conflicts as $appt) {
+                        // Construct existing appointment start/end
+                        // Ensure we use the date from the DB record and time from the DB record
+                        $apptDate = $appt->appointment_date instanceof \Carbon\Carbon 
+                            ? $appt->appointment_date->format('Y-m-d') 
+                            : $appt->appointment_date;
+                            
+                        $apptTime = $appt->appointment_time instanceof \Carbon\Carbon 
+                            ? $appt->appointment_time->format('H:i:s') 
+                            : $appt->appointment_time;
+
+                        $exStart = \Carbon\Carbon::parse($apptDate . ' ' . $apptTime);
+                        $exDuration = $appt->duration_minutes ?? 60; 
+                        $exEnd = $exStart->copy()->addMinutes($exDuration);
+
+                        // Overlap check: (StartA < EndB) and (EndA > StartB)
+                        if ($reqStart->lt($exEnd) && $reqEnd->gt($exStart)) {
+                            $fail('You already have an appointment scheduled during this time (' . $exStart->format('h:i A') . ' - ' . $exEnd->format('h:i A') . ').');
+                            return;
+                        }
                     }
                 },
             ],

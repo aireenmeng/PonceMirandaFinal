@@ -21,7 +21,7 @@ class PatientHistoryController extends Controller
 
         $query = Appointment::where('user_id', Auth::id())
             ->with(['doctor', 'service'])
-            ->orderBy('appointment_date', 'desc');
+            ->orderBy('appointment_date', 'asc');
 
         if ($search) {
             $query->where(function($q) use ($search) {

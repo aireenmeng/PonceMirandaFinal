@@ -128,7 +128,9 @@
                 </table>
             </div>
             {{-- Pagination links for the patient list --}}
-            {{ $patients->links() }}
+            <div class="d-flex justify-content-center mt-4">
+                {{ $patients->appends(['view' => $view, 'search' => $search])->links() }}
+            </div>
         </div>
     </div>
 @endsection

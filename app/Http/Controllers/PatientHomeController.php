@@ -25,11 +25,19 @@ class PatientHomeController extends Controller
     {
         $user = Auth::user();
 
+        $now = Carbon::now();
+
         // Retrieve the single earliest upcoming appointment.
         // We include 'pending' status so the user knows their request is in the system.
         $upcoming = Appointment::where('user_id', $user->id)
             ->whereIn('status', ['confirmed', 'pending']) 
-            ->where('appointment_date', '>=', Carbon::today())
+            ->where(function($query) use ($now) {
+                $query->whereDate('appointment_date', '>', $now->toDateString())
+                      ->orWhere(function($q) use ($now) {
+                          $q->whereDate('appointment_date', $now->toDateString())
+                            ->whereTime('appointment_time', '>', $now->toTimeString());
+                      });
+            })
             ->orderBy('appointment_date', 'asc')
             ->orderBy('appointment_time', 'asc')
             ->with(['doctor', 'service'])
@@ -44,7 +52,8 @@ class PatientHomeController extends Controller
             ->orderBy('appointment_date', 'desc')
             ->take(5)
             ->with(['doctor', 'service'])
-            ->get();
+            ->get()
+            ->sortBy('appointment_date');
 
         return view('patient.dashboard', compact('upcoming', 'history'));
     }

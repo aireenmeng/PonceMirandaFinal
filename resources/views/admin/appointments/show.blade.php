@@ -81,6 +81,15 @@
                     <p class="mb-2"><strong>Cancelled By:</strong> {{ $appointment->canceller->name ?? 'System' }}</p>
                     <p class="mb-2"><strong>Cancelled At:</strong> {{ $appointment->cancelled_at->format('F d, Y h:i A') }}</p>
                     <p class="mb-0"><strong>Reason:</strong> {{ $appointment->cancellation_reason ?? 'No reason provided.' }}</p>
+
+                    @if($appointment->appointment_date->isFuture() || $appointment->appointment_date->isToday())
+                        <div class="mt-4 text-center">
+                            <form action="{{ route('admin.appointments.restore', $appointment->id) }}" method="POST">
+                                @csrf
+                                <button class="btn btn-success btn-lg rounded-pill px-5"><i class="fas fa-undo mr-2"></i> Restore Appointment</button>
+                            </form>
+                        </div>
+                    @endif
                 @endif
 
                 {{-- DIAGNOSIS & PRESCRIPTION (If completed) --}}

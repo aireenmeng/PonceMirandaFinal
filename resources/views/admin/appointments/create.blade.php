@@ -176,7 +176,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-success btn-lg btn-block shadow-sm">
-                            <i class="fas fa-check-circle mr-2"></i> Confirm Walk-In
+                            <i class="fas fa-check-circle mr-2"></i> Confirm Appoinment
                         </button>
                     </form>
                 </div>

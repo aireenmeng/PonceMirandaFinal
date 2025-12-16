@@ -14,7 +14,8 @@ class AppointmentService
      *
      * @param array $appointmentData Must contain:
      *   'doctor_id', 'appointment_date', 'appointment_time', 'duration_minutes'.
-     * @param int|null $excludeAppointmentId Optional ID of an appointment to exclude from overlap checks (e.g., when updating an existing appointment).
+     *   Optional: 'user_id' (to check patient conflicts).
+     * @param int|null $excludeAppointmentId Optional ID of an appointment to exclude from overlap checks.
      * @return array An array of error messages, or an empty array if no conflicts.
      */
     public function checkConflicts(array $appointmentData, ?int $excludeAppointmentId = null): array
@@ -75,7 +76,7 @@ class AppointmentService
             $errors[] = 'Doctor\'s schedule is full for this day.';
         }
 
-        // --- 3. Check for Overlapping Appointments ---
+        // --- 3. Check for Overlapping Appointments (Doctor) ---
         $overlapQuery = Appointment::where('doctor_id', $doctorId)
             ->where('appointment_date', $requestedDate->toDateString())
             ->where('status', '!=', 'cancelled')
@@ -92,7 +93,33 @@ class AppointmentService
         $overlap = $overlapQuery->count();
 
         if ($overlap > 0) {
-            $errors[] = 'Appointment time overlaps with an existing appointment.';
+            $errors[] = 'Appointment time overlaps with an existing appointment for this doctor.';
+        }
+
+        // --- 4. Check for Overlapping Appointments (Patient) ---
+        if (isset($appointmentData['user_id']) && $appointmentData['user_id']) {
+            $patientOverlapQuery = Appointment::where('user_id', $appointmentData['user_id'])
+                ->where('appointment_date', $requestedDate->toDateString())
+                ->where('status', '!=', 'cancelled')
+                ->where(function($query) use ($requestedStartTime, $requestedEndTime) {
+                    $query->where(function($q) use ($requestedStartTime, $requestedEndTime) {
+                        $q->where('appointment_time', '<', $requestedEndTime->format('H:i:s'))
+                          ->whereRaw('ADDTIME(appointment_time, SEC_TO_TIME(duration_minutes * 60)) > ?', [$requestedStartTime->format('H:i:s')]);
+                    });
+                });
+
+            if ($excludeAppointmentId) {
+                $patientOverlapQuery->where('id', '!=', $excludeAppointmentId);
+            }
+            
+            // The patient might be booking with a DIFFERENT doctor, so we don't filter by doctor_id here.
+            // We just want to know if the PATIENT is busy.
+            
+            $patientOverlap = $patientOverlapQuery->count();
+
+            if ($patientOverlap > 0) {
+                $errors[] = 'Patient already has an appointment scheduled during this time.';
+            }
         }
 
         return $errors;

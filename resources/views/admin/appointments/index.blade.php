@@ -123,20 +123,30 @@
                     <div class="input-group-prepend">
                         <div class="input-group-text bg-white"><i class="fas fa-search text-gray-400"></i></div>
                     </div>
-                    <input type="text" class="form-control" name="search" placeholder="Patient or Doctor..." value="{{ $search }}">
+                    <input type="text" class="form-control" name="search" placeholder="Patient or Doctor..." value="{{ $search }}" onchange="this.form.submit()">
                 </div>
+
+                {{-- Sorting Dropdown --}}
+                <select name="sort_by" class="form-control mr-2 mb-2" onchange="this.form.submit()">
+                    <option value="">Sort By...</option>
+                    <option value="date_asc" {{ request('sort_by') == 'date_asc' ? 'selected' : '' }}>Date (Earliest)</option>
+                    <option value="date_desc" {{ request('sort_by') == 'date_desc' ? 'selected' : '' }}>Date (Latest)</option>
+                    <option value="created_desc" {{ request('sort_by') == 'created_desc' ? 'selected' : '' }}>Booking (Newest)</option>
+                    @if($currentTab == 'cancelled')
+                        <option value="cancelled_desc" {{ request('sort_by') == 'cancelled_desc' ? 'selected' : '' }}>Cancelled (Recent)</option>
+                    @endif
+                </select>
 
                 {{-- Date range filter, only shown if not viewing 'Today's' appointments --}}
                 @if(!request()->has('date')) 
                     <label class="mr-2 mb-2 text-gray-600 font-weight-bold small">From:</label>
-                    <input type="date" name="start_date" class="form-control mr-2 mb-2" value="{{ $startDate }}">
+                    <input type="date" name="start_date" class="form-control mr-2 mb-2" value="{{ $startDate }}" onchange="this.form.submit()">
 
                     <label class="mr-2 mb-2 text-gray-600 font-weight-bold small">To:</label>
-                    <input type="date" name="end_date" class="form-control mr-2 mb-2" value="{{ $endDate }}">
+                    <input type="date" name="end_date" class="form-control mr-2 mb-2" value="{{ $endDate }}" onchange="this.form.submit()">
                 @endif
 
                 {{-- Submit and Reset buttons for the filter form --}}
-                <button type="submit" class="btn btn-primary mb-2 shadow-sm">Filter</button>
                 {{-- Reset button navigates back to the current date view or pending status view --}}
                 <a href="{{ route('admin.appointments.index', request()->has('date') ? ['date' => request('date')] : ['status' => 'pending']) }}" class="btn btn-secondary mb-2 ml-2 shadow-sm">Reset</a>
             </form>
@@ -237,12 +247,14 @@
                                 <td>
                                     <div class="text-danger small font-italic mb-2">"{{ $appt->cancellation_reason }}"</div>
                                     {{-- Form to restore a cancelled appointment --}}
-                                    <form action="{{ route('admin.appointments.restore', $appt->id) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        {{-- Hidden inputs to pass current filters back to the same page after restore --}}
-                                        @foreach(request()->query() as $key => $value) <input type="hidden" name="{{ $key }}" value="{{ $value }}"> @endforeach
-                                        <button class="btn btn-success btn-sm rounded-pill px-3"><i class="fas fa-undo"></i> Restore</button>
-                                    </form>
+                                    @if($appt->appointment_date->isFuture() || $appt->appointment_date->isToday())
+                                        <form action="{{ route('admin.appointments.restore', $appt->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            {{-- Hidden inputs to pass current filters back to the same page after restore --}}
+                                            @foreach(request()->query() as $key => $value) <input type="hidden" name="{{ $key }}" value="{{ $value }}"> @endforeach
+                                            <button class="btn btn-success btn-sm rounded-pill px-3"><i class="fas fa-undo"></i> Restore</button>
+                                        </form>
+                                    @endif
                                 </td>
                             @else
                                 {{-- Standard actions (View, Edit, Confirm, Complete) --}}
