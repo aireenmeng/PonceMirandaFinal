@@ -16,12 +16,14 @@
 
                         <div class="form-group mb-3">
                             <label class="small text-muted font-weight-bold">Full Name</label>
-                            <input type="text" name="name" class="form-control rounded-pill px-3 py-2" required placeholder="Juan dela Cruz">
+                            <input type="text" name="name" class="form-control rounded-pill px-3 py-2" required placeholder="Juan dela Cruz" value="{{ old('name') }}">
+                            @error('name') <small class="text-danger pl-3">{{ $message }}</small> @enderror
                         </div>
 
                         <div class="form-group mb-3">
                             <label class="small text-muted font-weight-bold">Email Address</label>
-                            <input type="email" name="email" class="form-control rounded-pill px-3 py-2" required placeholder="juan@example.com">
+                            <input type="email" name="email" class="form-control rounded-pill px-3 py-2" required placeholder="juan@example.com" value="{{ old('email') }}">
+                            @error('email') <small class="text-danger pl-3">{{ $message }}</small> @enderror
                         </div>
 
                         <div class="form-group mb-3 position-relative">
@@ -31,6 +33,7 @@
                             <button type="button" onclick="togglePassword('reg_pass')" class="btn btn-link position-absolute" style="top: 32px; right: 10px; text-decoration: none; color: #aaa;">
                                 <i class="fas fa-eye" id="reg_pass-icon"></i>
                             </button>
+                            @error('password') <small class="text-danger pl-3">{{ $message }}</small> @enderror
                         </div>
 
                         <div class="form-group mb-4 position-relative">

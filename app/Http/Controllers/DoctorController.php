@@ -10,12 +10,17 @@ use Carbon\Carbon;
 
 class DoctorDashboardController extends Controller
 {
+    /**
+     * Display the doctor's dashboard.
+     *
+     * @return \Illuminate\View\View
+     */
     public function index()
     {
         $doctorId = Auth::id();
         $today = Carbon::today();
 
-        // 1. STANDARD: Focus on "Today's Agenda"
+        // Get today's confirmed and completed appointments
         $todaysAppointments = Appointment::with(['patient', 'service'])
             ->where('doctor_id', $doctorId)
             ->whereDate('appointment_date', $today)
@@ -23,7 +28,7 @@ class DoctorDashboardController extends Controller
             ->orderBy('appointment_time')
             ->get();
 
-        // 2. STANDARD: Upcoming Schedule (Next 7 Days)
+        // Count upcoming confirmed appointments for the next 7 days
         $upcomingCount = Appointment::where('doctor_id', $doctorId)
             ->where('appointment_date', '>', $today)
             ->where('status', 'confirmed')
@@ -32,8 +37,13 @@ class DoctorDashboardController extends Controller
         return view('doctor.dashboard', compact('todaysAppointments', 'upcomingCount'));
     }
 
-    // 3. STANDARD: Medical Notes (The Diagnosis)
-    // Doctors update the appointment with findings.
+    /**
+     * Update the diagnosis and prescription for a specific appointment.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $appointmentId
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function updateDiagnosis(Request $request, $appointmentId)
     {
         $request->validate([

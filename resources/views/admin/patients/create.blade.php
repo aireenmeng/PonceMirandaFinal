@@ -15,22 +15,34 @@
                     
                     <div class="form-group">
                         <label class="font-weight-bold">Full Name</label>
-                        <input type="text" name="name" class="form-control" required placeholder="e.g. Juan dela Cruz">
+                        <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required placeholder="e.g. Juan dela Cruz">
+                        @error('name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="form-group">
                         <label class="font-weight-bold">Email Address</label>
-                        <input type="email" name="email" class="form-control" required>
+                        <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" required>
+                        @error('email')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="form-group">
                         <label class="font-weight-bold">Phone Number</label>
-                        <input type="text" name="phone" class="form-control" placeholder="e.g. 0917...">
+                        <input type="tel" name="phone" class="form-control @error('phone') is-invalid @enderror" value="{{ old('phone') }}" placeholder="09xxxxxxxxx" pattern="^09\d{9}$" maxlength="11">
+                        @error('phone')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="form-group">
                         <label class="font-weight-bold">Temporary Password</label>
-                        <input type="text" name="password" class="form-control" value="password" required>
+                        <input type="text" name="password" class="form-control @error('password') is-invalid @enderror" value="{{ old('password', 'password') }}" required>
+                        @error('password')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                         <small class="form-text text-muted">Default is 'password'. The patient can change this later.</small>
                     </div>
 

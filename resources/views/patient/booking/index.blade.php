@@ -14,7 +14,7 @@
         <input type="hidden" name="doctor_id" id="input_doctor_id" required>
         <input type="hidden" name="appointment_date" id="input_date" required>
         <input type="hidden" name="appointment_time" id="input_time" required>
-        {{-- IMPORTANT: We pass the calculated minutes to the backend --}}
+
         <input type="hidden" name="duration_minutes" id="input_duration" required>
 
         <div class="row">
@@ -171,14 +171,21 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
-        var today = new Date().toISOString().split('T')[0]; 
+        var today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        var twoMonthsLater = new Date();
+        twoMonthsLater.setMonth(twoMonthsLater.getMonth() + 2);
+        twoMonthsLater.setDate(twoMonthsLater.getDate() + 1); // Add a day to include the last day of the 2nd month
+        var maxDate = twoMonthsLater.toISOString().split('T')[0];
 
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             height: 400,
             headerToolbar: { left: 'prev,next', center: 'title', right: '' },
             selectable: true,
-            validRange: { start: today },
+            validRange: { 
+                start: today, 
+                end: maxDate // End date is exclusive in FullCalendar
+            },
             events: function(info, successCallback, failureCallback) {
                 if (!selectedDoctorId) { successCallback([]); return; }
                 fetch(`{{ route('api.calendar') }}?doctor_id=${selectedDoctorId}&start=${info.startStr}&end=${info.endStr}`)
@@ -186,7 +193,16 @@
             },
             dateClick: function(info) {
                 if (!selectedDoctorId) return;
-                if (info.dateStr < today) return; 
+                
+                // Client-side validation for dates outside validRange
+                if (info.dateStr < today) {
+                    alert('Cannot book in the past.');
+                    return;
+                }
+                if (info.dateStr >= maxDate) { // FullCalendar's 'end' is exclusive
+                    alert('Cannot book more than two months in advance.');
+                    return;
+                }
 
                 document.querySelectorAll('.fc-daygrid-day').forEach(el => el.style.backgroundColor = '');
                 info.dayEl.style.backgroundColor = '#eaecf4';

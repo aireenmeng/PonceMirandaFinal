@@ -1,15 +1,18 @@
 @extends('layouts.admin') 
-{{-- Re-using Admin Layout for consistency, but Sidebar will show Patient Menu --}}
+
 
 @section('content')
 
 <div class="container-fluid">
 
+
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <div>
+   
             <h1 class="h3 mb-0 text-gray-800">Hello, {{ Auth::user()->name }}!</h1>
             <p class="mb-0 text-muted">Welcome to your personal health portal.</p>
         </div>
+
         <a href="{{ route('patient.booking.step1') }}" class="btn btn-primary btn-lg shadow-sm">
             <i class="fas fa-plus-circle fa-sm text-white-50 mr-2"></i> Book Appointment
         </a>
@@ -17,8 +20,9 @@
 
     <div class="row">
         
+     
         <div class="col-lg-5 mb-4">
-            
+        
             @if($upcoming)
                 <div class="card shadow mb-4 border-left-{{ $upcoming->status == 'confirmed' ? 'success' : 'warning' }}">
                     <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
@@ -34,13 +38,11 @@
                     <div class="card-body">
                         <div class="text-center mb-4">
                             <div class="h1 font-weight-bold text-gray-800 mb-1">
-                                {{ $upcoming->appointment_date->format('M d') }}
                             </div>
                             <div class="h5 text-primary">
-                                {{ $upcoming->appointment_date->format('l') }} @ {{ $upcoming->appointment_time->format('h:i A') }}
                             </div>
                         </div>
-                        
+
                         <div class="row text-center mb-3">
                             <div class="col-6 border-right">
                                 <small class="text-uppercase text-muted font-weight-bold">Doctor</small>
@@ -53,7 +55,7 @@
                         </div>
 
                         <hr>
-                        
+
                         <div class="text-center">
                             @if($upcoming->status == 'pending')
                                 <p class="small text-muted mb-0">We are reviewing your request.</p>
@@ -66,6 +68,7 @@
             @else
                 <div class="card shadow mb-4">
                     <div class="card-body text-center py-5">
+                        {{-- Placeholder image for no upcoming appointments --}}
                         <img src="https://img.icons8.com/clouds/100/000000/calendar.png" class="mb-3" style="opacity: 0.7;">
                         <h5 class="text-gray-800 font-weight-bold">No Upcoming Visits</h5>
                         <p class="text-muted mb-4">It looks like your schedule is clear.</p>
@@ -77,13 +80,13 @@
             @endif
 
         </div>
-
         <div class="col-lg-7">
             <div class="card shadow mb-4">
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-striped mb-0">
                             <thead class="bg-light">
+                                {{-- Table headers for past appointments --}}
                                 <tr>
                                     <th>Date</th>
                                     <th>Treatment</th>

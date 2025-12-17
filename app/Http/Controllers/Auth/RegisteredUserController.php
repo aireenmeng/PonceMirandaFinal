@@ -46,7 +46,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        // --- FORCE PATIENTS TO DASHBOARD ---
-        return redirect()->route('dashboard');
+        // --- FORCE PATIENTS TO DASHBOARD (or intended page) ---
+        return redirect()->intended(route('dashboard'));
     }
 }

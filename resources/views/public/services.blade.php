@@ -23,7 +23,7 @@
                     <p class="text-muted mb-4">
                         {{ $service->description ?? 'Professional dental procedure performed by our experts.' }}
                     </p>
-                    <a href="{{ route('login') }}" class="btn btn-outline-success btn-sm font-weight-bold">Book Now</a>
+                    <a href="{{ route('patient.booking.step1') }}" class="btn btn-primary btn-sm">Book Now</a>
                 </div>
             </div>
         </div>

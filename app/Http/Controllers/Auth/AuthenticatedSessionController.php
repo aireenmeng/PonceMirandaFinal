@@ -28,19 +28,17 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // --- CUSTOM REDIRECT LOGIC ---
-        $role = $request->user()->role;
+        $user = $request->user();
 
-        if ($role === 'admin') {
-            return redirect()->route('admin.dashboard');
-        } 
-        
-        if ($role === 'doctor') {
-            return redirect()->route('doctor.dashboard');
+        // Redirect based on role
+        if ($user->role === 'admin') {
+            return redirect()->intended(route('admin.dashboard')); 
+        } elseif ($user->role === 'doctor') {
+            return redirect()->intended(route('doctor.dashboard'));
         }
 
-        // Default for Patients
-        return redirect()->route('dashboard');
+        // Default for patient and others
+        return redirect()->intended(route('dashboard'));
     }
 
     /**
@@ -54,6 +52,9 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // --- FIX IS HERE ---
+        // Old code was likely: return redirect('/'); 
+        // This caused the 404 because you don't have a homepage.
+        return redirect('/login'); 
     }
 }

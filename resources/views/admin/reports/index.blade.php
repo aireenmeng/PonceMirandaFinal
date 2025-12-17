@@ -17,12 +17,38 @@
     <div class="card shadow mb-4 d-print-none">
         <div class="card-body py-2">
             <form action="{{ route('admin.reports.index') }}" method="GET" class="form-inline justify-content-between">
-                <div class="d-flex align-items-center">
-                    <label class="mr-2 font-weight-bold text-gray-700">Date Range:</label>
+                <input type="hidden" name="active_tab" id="activeTabInput" value="{{ request('active_tab', 'ledger') }}">
+                <div class="d-flex align-items-center flex-wrap">
+                    <label class="mr-2 font-weight-bold text-gray-700">Filters:</label>
+                    
+                    {{-- Doctor Filter --}}
+                    <select name="doctor_id" class="custom-select custom-select-sm mr-2" style="width: 180px;" onchange="this.form.submit()">
+                        <option value="">All Doctors</option>
+                        @foreach($doctors as $doc)
+                            <option value="{{ $doc->id }}" {{ request('doctor_id') == $doc->id ? 'selected' : '' }}>
+                                Dr. {{ $doc->name }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    {{-- Service Filter --}}
+                    <select name="service_id" class="custom-select custom-select-sm mr-2" style="width: 180px;" onchange="this.form.submit()">
+                        <option value="">All Services</option>
+                        @foreach($services as $srv)
+                            <option value="{{ $srv->id }}" {{ request('service_id') == $srv->id ? 'selected' : '' }}>
+                                {{ $srv->name }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <label class="mr-2 font-weight-bold text-gray-700">Date:</label>
                     <input type="date" name="start_date" class="form-control form-control-sm mr-2" value="{{ $start->format('Y-m-d') }}">
                     <span class="mr-2 text-gray-500">to</span>
                     <input type="date" name="end_date" class="form-control form-control-sm mr-3" value="{{ $end->format('Y-m-d') }}">
                     <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-filter mr-1"></i> Filter</button>
+                    <a href="{{ route('admin.reports.index') }}" class="btn btn-sm btn-secondary ml-1" title="Clear Filters">
+                        <i class="fas fa-undo"></i>
+                    </a>
                 </div>
                 <div>
                     <span class="badge badge-light border text-dark p-2">
@@ -45,22 +71,22 @@
         <div class="d-print-none mb-3">
             <ul class="nav nav-tabs" id="reportTabs" role="tablist">
                 <li class="nav-item">
-                    <a class="nav-link active" id="tab-ledger" data-toggle="tab" href="#ledger" role="tab">
+                    <a class="nav-link {{ request('active_tab', 'ledger') == 'ledger' ? 'active' : '' }}" id="tab-ledger" data-toggle="tab" href="#ledger" role="tab" onclick="document.getElementById('activeTabInput').value='ledger'">
                         <i class="fas fa-list mr-1"></i> Transaction Ledger
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" id="tab-services" data-toggle="tab" href="#services" role="tab">
+                    <a class="nav-link {{ request('active_tab') == 'services' ? 'active' : '' }}" id="tab-services" data-toggle="tab" href="#services" role="tab" onclick="document.getElementById('activeTabInput').value='services'">
                         <i class="fas fa-tooth mr-1"></i> Top Services
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" id="tab-doctors" data-toggle="tab" href="#doctors" role="tab">
+                    <a class="nav-link {{ request('active_tab') == 'doctors' ? 'active' : '' }}" id="tab-doctors" data-toggle="tab" href="#doctors" role="tab" onclick="document.getElementById('activeTabInput').value='doctors'">
                         <i class="fas fa-user-md mr-1"></i> Doctor Productivity
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-danger" id="tab-audit" data-toggle="tab" href="#audit" role="tab">
+                    <a class="nav-link {{ request('active_tab') == 'audit' ? 'active' : '' }} text-danger" id="tab-audit" data-toggle="tab" href="#audit" role="tab" onclick="document.getElementById('activeTabInput').value='audit'">
                         <i class="fas fa-shield-alt mr-1"></i> Audit Log
                     </a>
                 </li>
@@ -69,7 +95,7 @@
 
         <div class="tab-content">
             
-            <div class="tab-pane fade show active" id="ledger" role="tabpanel">
+            <div class="tab-pane fade {{ request('active_tab', 'ledger') == 'ledger' ? 'show active' : '' }}" id="ledger" role="tabpanel">
                 <div class="card shadow mb-4">
                     <div class="card-header py-3 bg-white d-flex justify-content-between">
                         <h6 class="m-0 font-weight-bold text-primary">Completed Transactions</h6>
@@ -84,17 +110,23 @@
                                         <th>Patient</th>
                                         <th>Service</th>
                                         <th>Doctor</th>
+                                        <th>Diagnosis</th>
+                                        <th>Prescription</th>
                                         <th class="text-right">Amount</th>
+
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($completedAppts as $appt)
                                     <tr>
                                         <td>{{ $appt->appointment_date->format('M d, Y') }}</td>
-                                        <td>{{ $appt->patient->name }}</td>
+                                        <td>{{ $appt->patient->name ?? 'N/A (Patient Deleted)' }}</td>
                                         <td>{{ $appt->service->name }}</td>
                                         <td>Dr. {{ $appt->doctor->name }}</td>
-                                        <td class="text-right font-weight-bold">₱{{ number_format($appt->service->price, 2) }}</td>
+                                        <td>{{ $appt->diagnosis  }}</td>
+                                        <td>{{ $appt->prescription }}</td>
+
+                                        <td class="text-right font-weight-bold">₱{{ number_format($appt->price, 2) }}</td>
                                     </tr>
                                     @empty
                                     <tr><td colspan="5" class="text-center text-muted">No records found.</td></tr>
@@ -106,7 +138,7 @@
                 </div>
             </div>
 
-            <div class="tab-pane fade" id="services" role="tabpanel">
+            <div class="tab-pane fade {{ request('active_tab') == 'services' ? 'show active' : '' }}" id="services" role="tabpanel">
                 <div class="card shadow mb-4">
                     <div class="card-header py-3 bg-white">
                         <h6 class="m-0 font-weight-bold text-info">Service Performance Analysis</h6>
@@ -134,7 +166,7 @@
                 </div>
             </div>
 
-            <div class="tab-pane fade" id="doctors" role="tabpanel">
+            <div class="tab-pane fade {{ request('active_tab') == 'doctors' ? 'show active' : '' }}" id="doctors" role="tabpanel">
                 <div class="card shadow mb-4">
                     <div class="card-header py-3 bg-white">
                         <h6 class="m-0 font-weight-bold text-success">Doctor Productivity Report</h6>
@@ -162,7 +194,7 @@
                 </div>
             </div>
 
-            <div class="tab-pane fade" id="audit" role="tabpanel">
+            <div class="tab-pane fade {{ request('active_tab') == 'audit' ? 'show active' : '' }}" id="audit" role="tabpanel">
                 <div class="card shadow mb-4 border-left-danger">
                     <div class="card-header py-3 bg-white">
                         <h6 class="m-0 font-weight-bold text-danger">Cancellation Security Log</h6>
@@ -216,22 +248,22 @@
 
     <script>
         function printReport() {
-            // 1. Expand all tabs so they are visible in print
-            $('.tab-pane').addClass('show active');
-            $('.nav-tabs').hide(); // Hide the clickable tabs
-            
             window.print();
-
-            // 2. Reset after print (reload to be safe or just revert classes)
-            // Timeout allows the print dialog to open before we reset
-            setTimeout(() => {
-                $('.nav-tabs').show();
-                // Optional: Reload to restore exact state
-                // location.reload(); 
-            }, 1000);
         }
 
         function exportToExcel() {
+            // Check if current inputs match the report dates
+            const currentStart = "{{ $start->format('Y-m-d') }}";
+            const currentEnd = "{{ $end->format('Y-m-d') }}";
+            const inputStart = document.querySelector('input[name="start_date"]').value;
+            const inputEnd = document.querySelector('input[name="end_date"]').value;
+
+            if (currentStart !== inputStart || currentEnd !== inputEnd) {
+                if(!confirm("The selected date range does not match the generated report.\n\nClick 'Cancel' to Update/Filter the report first.\nClick 'OK' to export the currently displayed data.")) {
+                    return;
+                }
+            }
+
             /* Create a new workbook */
             var wb = XLSX.utils.book_new();
             
@@ -247,35 +279,79 @@
             var ws3 = XLSX.utils.table_to_sheet(document.getElementById('table-doctors'));
             XLSX.utils.book_append_sheet(wb, ws3, "Doctors");
 
-            /* Save file */
-            XLSX.writeFile(wb, "PonceMiranda_Report_{{ now()->format('Y-m-d') }}.xlsx");
+            /* Save file with date range */
+            XLSX.writeFile(wb, "PonceMiranda_Report_{{ $start->format('Y-m-d') }}_to_{{ $end->format('Y-m-d') }}.xlsx");
         }
     </script>
 
     <style>
         @media print {
-            /* Hide everything by default */
-            body * { visibility: hidden; }
+            /* Hide Sidebar, Topbar, Buttons, Inputs */
+            .sidebar, .topbar, .btn, .d-print-none, form, footer, #accordionSidebar { 
+                display: none !important; 
+            }
             
-            /* Show only the report container */
-            #reportContainer, #reportContainer * { visibility: visible; }
-            
-            /* Positioning */
-            #reportContainer {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
+            /* Reset Layout */
+            #wrapper { 
+                display: block !important; 
+                width: 100% !important; 
+                overflow: visible !important;
+            }
+            #content-wrapper { 
+                margin-left: 0 !important; 
+                width: 100% !important; 
+                overflow: visible !important;
+            }
+            #content {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .container-fluid { 
+                padding: 0 !important; 
+                max-width: 100% !important;
             }
 
-            /* Clean up for Paper */
-            .card { border: none !important; box-shadow: none !important; margin-bottom: 20px; }
-            .card-header { border-bottom: 2px solid #000 !important; background: none !important; padding-left: 0; }
-            .table { width: 100% !important; border-collapse: collapse; }
-            .badge { border: 1px solid #000; color: #000 !important; background: none !important; }
+            /* Report Container Visibility */
+            #reportContainer { 
+                display: block !important; 
+                width: 100% !important;
+            }
+
+            /* Show all Tab Panes (stacked) */
+            .tab-content > .tab-pane {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
+            .nav-tabs { display: none !important; }
+
+            /* Styling for Print */
+            .card { 
+                border: none !important; 
+                box-shadow: none !important; 
+                margin-bottom: 20px !important;
+            }
+            .card-header {
+                background-color: #fff !important;
+                border-bottom: 2px solid #333 !important;
+                color: #000 !important;
+            }
+            .table { 
+                width: 100% !important; 
+                border-collapse: collapse !important; 
+            }
+            .table th, .table td {
+                color: #000 !important;
+                border: 1px solid #ddd !important;
+            }
             
-            /* Hiding buttons/tabs explicitly */
-            .btn, .nav-tabs, .d-print-none { display: none !important; }
+            /* Typography */
+            body { 
+                font-size: 12pt; 
+                color: #000 !important; 
+                background: #fff !important;
+            }
+            h1, h2, h3, h4, h5, h6 { color: #000 !important; }
         }
     </style>
 @endpush

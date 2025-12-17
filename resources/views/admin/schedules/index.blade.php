@@ -21,6 +21,7 @@
                     <h6 class="m-0 font-weight-bold text-primary">Monthly Overview</h6>
                     
                     <select id="doctorFilter" class="custom-select custom-select-sm shadow-sm border-0 bg-light text-dark font-weight-bold" style="width: 250px;">
+                        <option value="all">All Doctors</option>
                         <option value="">-- Select Doctor --</option>
                         @foreach($doctors as $doc)
                             <option value="{{ $doc->id }}">Dr. {{ $doc->name }}</option>
@@ -137,33 +138,43 @@
     <script>
     var calendar;
     var currentSelectedDate = null;
-    var currentDoctorId = null;
+    var currentDoctorId = 'all'; 
     var currentDayStatus = 'closed'; 
     var isAdjustMode = false;
 
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
         var doctorSelect = document.getElementById('doctorFilter');
+        
+        // 1. Check URL Params for State Restoration
+        const urlParams = new URLSearchParams(window.location.search);
+        const preDoctor = urlParams.get('doctor_id');
+        const preDate = urlParams.get('date');
+
+        if(preDoctor) {
+            doctorSelect.value = preDoctor;
+        }
 
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
+            initialDate: preDate ? preDate : new Date(), // Restore Month
             headerToolbar: { left: 'prev,next', center: 'title', right: '' },
             height: 500,
             validRange: { start: new Date().toISOString().split('T')[0] },
             events: function(info, successCallback, failureCallback) {
-                var doctorId = doctorSelect.value;
-                if(!doctorId) { successCallback([]); return; }
+                var doctorId = doctorSelect.value || 'all'; // Default to 'all'
                 fetch("{{ route('api.calendar') }}?doctor_id=" + doctorId + "&start=" + info.startStr + "&end=" + info.endStr)
                     .then(r => r.json()).then(data => successCallback(data));
             },
             dateClick: function(info) {
-                if(!doctorSelect.value) { alert("Please select a doctor first."); return; }
+                // Allow click for 'all' or specific doctor
+                // if(!doctorSelect.value) { alert("Please select a doctor first."); return; } // Removed restriction
                 
                 document.querySelectorAll('.fc-daygrid-day').forEach(el => el.style.backgroundColor = '');
                 info.dayEl.style.backgroundColor = '#d1e3ff'; 
                 
                 currentSelectedDate = info.dateStr;
-                currentDoctorId = doctorSelect.value;
+                currentDoctorId = doctorSelect.value || 'all';
                 
                 document.getElementById('selectedDateLabel').innerText = new Date(info.dateStr).toDateString();
                 isAdjustMode = false;
@@ -173,7 +184,19 @@
 
         calendar.render();
 
+        // 2. Restore Selection if params exist
+        if(preDoctor && preDate) {
+            currentDoctorId = preDoctor;
+            currentSelectedDate = preDate;
+            document.getElementById('selectedDateLabel').innerText = new Date(preDate).toDateString();
+            
+            // Highlight the day (tricky in FC after render, but we try)
+            // We can't easily find the element without dateClick, but we can load the side panel.
+            fetchDayDetails();
+        }
+
         doctorSelect.addEventListener('change', function() {
+            currentDoctorId = this.value || 'all';
             calendar.refetchEvents();
             document.getElementById('day-details-container').innerHTML = `
                 <div class="text-center mt-5 text-muted p-4">
@@ -193,6 +216,13 @@
         fetch(`{{ route('api.day_details') }}?date=${currentSelectedDate}&doctor_id=${currentDoctorId}`)
             .then(r => r.json())
             .then(data => {
+                // HANDLE ALL DOCTORS VIEW
+                if (data.type === 'aggregate') {
+                    btn.style.display = 'none'; // No actions allowed
+                    renderPatientList(data.appointments);
+                    return;
+                }
+
                 currentDayStatus = data.status;
 
                 if (data.status === 'closed') {
@@ -220,12 +250,45 @@
             });
     }
 
+    function renderPatientList(appointments) {
+        const container = document.getElementById('day-details-container');
+        if(!appointments || appointments.length === 0) {
+            container.innerHTML = `
+                <div class="text-center mt-5 text-muted p-4">
+                    <i class="fas fa-calendar-times fa-3x mb-3 text-gray-200"></i>
+                    <p>No appointments for this date.</p>
+                </div>`;
+            return;
+        }
+
+        let html = '<div class="list-group list-group-flush">';
+        appointments.forEach(appt => {
+            html += `
+                <div class="list-group-item px-0 bg-transparent border-bottom">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="font-weight-bold text-primary">${appt.time}</span>
+                        <span class="badge badge-secondary text-uppercase" style="font-size:0.7rem">${appt.status}</span>
+                    </div>
+                    <div class="font-weight-bold text-dark mb-1">${appt.patient_name}</div>
+                    <div class="small text-muted mb-2">
+                        <i class="fas fa-user-md mr-1"></i> ${appt.doctor_name} <br>
+                        <i class="fas fa-tooth mr-1"></i> ${appt.service_name}
+                    </div>
+                    <div class="text-right">
+                         <a href="/admin/appointments/${appt.id}?from=calendar&doctor_id=all&date=${currentSelectedDate}" class="btn btn-sm btn-primary shadow-sm py-1 px-3" style="font-size:0.75rem">View Details</a>
+                    </div>
+                </div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
     function renderSlots(slots) {
         const container = document.getElementById('day-details-container');
         let html = '';
 
         slots.forEach(slot => {
-            // 1. LUNCH
+     
             if (slot.type === 'lunch') {
                 html += `
                 <div class="slot-row status-lunch">
@@ -236,39 +299,42 @@
             }
 
             if (isAdjustMode) {
-                // 2. ADJUST MODE
+        
                 if (slot.type === 'booked') {
                         html += `<div class="slot-row bg-light"><div class="slot-time text-muted">${slot.time_label}</div><div class="slot-status text-muted">BOOKED</div><span class="badge badge-secondary"><i class="fas fa-lock"></i></span></div>`;
                 } else {
                     let isBlocked = (slot.type === 'blocked');
+               
                     html += `
                         <div class="slot-row ${isBlocked ? 'status-blocked' : 'status-open'}">
                             <div class="slot-time">${slot.time_label}</div>
-                            <div class="btn-group btn-group-sm btn-group-toggle shadow-sm" data-toggle="buttons" style="border-radius: 20px; overflow: hidden;">
-                                <label class="btn btn-white border ${!isBlocked ? 'active text-success font-weight-bold' : 'text-muted'}" onclick="updateBlockStatus('${slot.raw_time}', 'available')"><input type="radio"> Open</label>
-                                <label class="btn btn-white border ${isBlocked ? 'active text-danger font-weight-bold' : 'text-muted'}" onclick="updateBlockStatus('${slot.raw_time}', 'reserved')"><input type="radio"> Block</label>
-                            </div>
+                            <div class="slot-status">${isBlocked ? 'BLOCKED' : 'Available'}</div>
+                            
+                            ${isBlocked 
+                                ? `<button class="btn btn-sm btn-outline-secondary shadow-sm" onclick="updateBlockStatus('${slot.raw_time}', 'available')">Unblock</button>`
+                                : `<button class="btn btn-sm btn-danger shadow-sm" onclick="updateBlockStatus('${slot.raw_time}', 'reserved')">Block</button>`
+                            }
                         </div>`;
                 }
             } else {
-                // 3. VIEW MODE (Standard)
+              
                 if (slot.type === 'booked') {
-                    // LINK FIX: Now uses slot.appt_id correctly
+                
                     html += `
                     <div class="slot-row status-booked">
                         <div class="slot-time">${slot.time_label}</div>
                         <div class="slot-status">Booked</div>
-                        <a href="/admin/appointments/${slot.appt_id}" class="btn btn-sm btn-circle btn-danger shadow-sm"><i class="fas fa-eye"></i></a>
+                        <a href="/admin/appointments/${slot.appt_id}?from=calendar&doctor_id=${currentDoctorId}&date=${currentSelectedDate}" class="btn btn-sm btn-circle btn-danger shadow-sm"><i class="fas fa-eye"></i></a>
                     </div>`;
                 } else if (slot.type === 'blocked') {
                     html += `
                     <div class="slot-row status-blocked">
                         <div class="slot-time">${slot.time_label}</div>
                         <div class="slot-status">Blocked</div>
+                        <button class="btn btn-sm btn-outline-secondary shadow-sm mr-2" onclick="updateBlockStatus('${slot.raw_time}', 'available')">Unblock</button>
                     </div>`;
                 } else {
-                    // LINK FIX: Now uses slot.raw_date correctly
-                    // DESIGN FIX: Text removed, only Icon kept
+           
                     html += `
                     <div class="slot-row status-open">
                         <div class="slot-time">${slot.time_label}</div>
@@ -285,6 +351,8 @@
     }
 
     function handleSmartAction() {
+        if (currentDoctorId === 'all') return;
+
         if (currentDayStatus === 'closed') {
             document.getElementById('initDoctorId').value = currentDoctorId;
             document.getElementById('initDate').value = currentSelectedDate;
@@ -314,11 +382,22 @@
     }
 
     function updateBlockStatus(time, status) {
+  
         fetch("{{ route('admin.appointments.block') }}", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
             body: JSON.stringify({ doctor_id: currentDoctorId, date: currentSelectedDate, time: time, status: status })
-        });
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                fetchDayDetails(); 
+                calendar.refetchEvents(); 
+            } else {
+                alert("Failed to update slot.");
+            }
+        })
+        .catch(err => console.error(err));
     }
 </script>
 @endpush

@@ -10,7 +10,8 @@
         <div class="card-body">
             <form action="{{ route('admin.services.update', $service->id) }}" method="POST">
                 @csrf
-                @method('PUT') <div class="form-group">
+                @method('PUT')
+                <div class="form-group">
                     <label>Service Name</label>
                     <input type="text" name="name" class="form-control" value="{{ $service->name }}" required>
                 </div>

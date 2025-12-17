@@ -12,12 +12,15 @@ class Appointment extends Model
 
     protected $fillable = [
         'user_id',
-        'doctor_id', // <--- Added
+        'doctor_id', 
         'service_id',
         'appointment_date',
         'appointment_time',
         'duration_minutes',
+        'price',
         'status',
+        'diagnosis', 
+        'prescription', 
         'cancellation_reason',
         'cancelled_by',
         'cancelled_at'
@@ -26,6 +29,7 @@ class Appointment extends Model
     protected $casts = [
         'appointment_date' => 'date',
         'appointment_time' => 'datetime',
+        'duration_minutes' => 'integer', 
         'cancelled_at' => 'datetime',
     ];
 
